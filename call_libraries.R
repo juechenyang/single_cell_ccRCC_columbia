@@ -1,0 +1,16 @@
+set.seed(10)
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(infercnv)
+library(ggpubr)
+library(patchwork)
+library(ComplexHeatmap)
+library(circlize)
+library(future)
+source("Azimuth.R")
+source("Integration.R")
+source("Infercnv.R")
+source("pipelines.R")
+
+
