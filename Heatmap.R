@@ -1,16 +1,27 @@
 source("call_libraries.R")
 source("initialize_columbia.R")
-integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
 
+integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
+png("umap_before_filter.png",9,9, units = "in", res = 300)
+DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+ggtitle("seurat_cluster")
+dev.off()
+
+
+
+integrated_cancer_cell = readRDS("filtered_integrated_cancer_cells_0.9_0.7.rds")
 hla_selected_markers = c("HLA-DRA", "HLA-DPB1")
 mrp_selected_markers = c("MRPS10", "MRPL12", "MRPL14", "MRPS36", "MRPS5")
 nduf_selected_markers = c("NDUFAB1", "NDUFAF3", "NDUFA5", "NDUFS3", 
                           "ATP5MC1","ATP5MC2","COA3","UQCRC1")
+hla_markers = hla_selected_markers
+mrp_markers = mrp_selected_markers
+nduf_markers = nduf_selected_markers
+
 integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
-                                        features = list(hla_selected_markers, 
-                                                        mrp_selected_markers, 
-                                                        nduf_selected_markers, 
-                                                        c(mrp_selected_markers, nduf_selected_markers), 
+                                        features = list(hla_markers, 
+                                                        mrp_markers, 
+                                                        nduf_markers, 
+                                                        c(mrp_markers, nduf_markers), 
                                                         EMT_markers,
                                                         PT_markers), 
                                         assay = "RNA", 
@@ -27,7 +38,7 @@ p3 = FeaturePlot(integrated_cancer_cell, features = c("hla_score", "mrp_score",
                                                       "nduf_score", "mrp_nduf_score", 
                                                       "emt_score","pt_score"), ncol = 3, min.cutoff = -0.5, max.cutoff = 0.5)
 
-png("test1.png",24,12, units = "in", res = 300)
+png("umaps_selected_markers.png",24,12, units = "in", res = 300)
 ggarrange(
   ggarrange(p1, p2, nrow = 2), 
   p3,
@@ -103,7 +114,7 @@ ht = Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster
              )
 )
 
-png("test2.png", 30,16, units = "in", res = 300)
+png("filtered_cancer_cells_heatmap.png", 30,16, units = "in", res = 300)
 draw(ht, heatmap_legend_side = "bottom")
 dev.off()
 
