@@ -48,6 +48,8 @@ Integrate_seurat_obj_by_key = function(obj, key, method_SCT = T, method_rpca = F
                                         k.anchor = n.anchors)
     }
     result_data <- IntegrateData(anchorset = anchors, verbose = F)
+    DefaultAssay(result_data) <- "integrated"
+    result_data <- ScaleData(result_data, verbose = FALSE)
   }
   
   return(result_data)
