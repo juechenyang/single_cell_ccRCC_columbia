@@ -6,6 +6,8 @@ png("umap_before_filter.png",9,9, units = "in", res = 300)
 DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+ggtitle("seurat_cluster")
 dev.off()
 
+png("")
+
 
 
 #integrated_cancer_cell = readRDS("filtered_integrated_cancer_cells_0.9_0.7.rds")
@@ -71,7 +73,7 @@ top_anno = HeatmapAnnotation(
   stage = order_df$stage,
   seurat_cluster = order_df$seurat_cluster,
   simple_anno_size = unit(1, "cm"),
-  show_annotation_name = FALSE,
+  #show_annotation_name = FALSE,
   col = list(patient = patient_colors,
              stage = stage_colors,
              seurat_cluster = seurat_cluster_colors),
@@ -118,7 +120,16 @@ ht = Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster
 )
 
 png("module_score_heatmap.png", 25,12, units = "in", res = 300)
-draw(ht, heatmap_legend_side = "bottom")
+draw(ht, heatmap_legend_side = "bottom", annotation_legend_side = "right")
+# decorate_annotation("patient",
+#                     {grid.text("patient", x = unit(-2, "mm"),just = "right", gp = gpar(fontsize = 8))}
+# )
+# decorate_annotation("stage",
+#                     {grid.text("stage", x = unit(-2, "mm"),just = "right", gp = gpar(fontsize = 8))}
+# )
+# decorate_annotation("seurat_cluster",
+#                     {grid.text("cluster", x = unit(-2, "mm"),just = "right", gp = gpar(fontsize = 8))}
+# )
 dev.off()
 
 
