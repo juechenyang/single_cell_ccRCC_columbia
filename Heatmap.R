@@ -1,13 +1,10 @@
 source("call_libraries.R")
-source("initialize_columbia.R")
+source("Initialization.R")
 
 integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
 png("umap_before_filter.png",9,9, units = "in", res = 300)
 DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+ggtitle("seurat_cluster")
 dev.off()
-
-png("")
-
 
 
 #integrated_cancer_cell = readRDS("filtered_integrated_cancer_cells_0.9_0.7.rds")
