@@ -17,4 +17,7 @@ integrated = Integrate_seurat_obj_by_key(cohort, key = "patient",
                                          method_SCT = T, method_rpca = F)
 integrated_azimuth = run_azimuth(integrated, reference_path = "./azimuth_reference/")
 integrated$individual_anno = as.character(integrated_azimuth$predicted.annotation.l1)
+#run umap and find neighbours
+integrated = run_pca_and_umap(integrated)
+integrated = find_neighbours_and_clusters(integrated, res = seq(0.05,0.2,0.05))
 saveRDS(integrated, "cd45neg_tumor_integrated_SCT_nonRPCA_azimuth.rds")
