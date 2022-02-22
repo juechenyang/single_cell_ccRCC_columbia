@@ -1,16 +1,40 @@
 source("call_libraries.R")
 source("Initialization.R")
-
+#load data
 integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
-png("umap_before_filter.png",9,9, units = "in", res = 300)
-DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+ggtitle("seurat_cluster")
+
+
+#######################################################
+#Umaps
+#######################################################
+
+#subclustering_umap
+all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
+all_types = str_sort(all_types)
+palette_color = c("chocolate1", "cyan", "gold", "aquamarine", "deepskyblue", 
+                  "cyan4", "darkblue", "darksalmon", "darkorchid1",
+                  "goldenrod4", "firebrick4", "firebrick1", "darkolivegreen1","darkslategray", "darkmagenta")
+all_colors = colorRampPalette(palette_color)(length(all_types))
+names(all_colors) = all_types
+png("subclustering_umap.png",9,9, units = "in", res = 300)
+DimPlot(integrated_cancer_cell, reduction = "umap", 
+        group.by = "integrated_snn_res.0.2")+
+  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
 dev.off()
 
 
-#integrated_cancer_cell = readRDS("filtered_integrated_cancer_cells_0.9_0.7.rds")
-integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
+
+
+
 DefaultAssay(integrated_cancer_cell) = "RNA"
 integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
+marker_genes = c("VHL", "PBRM1","BAP1", "CA9", "HIF1A", "EPAS1")
+png("marker_genes_expression_umap.png",24,12, units = "in", res = 300)
+FeaturePlot(integrated_cancer_cell, features = marker_genes, ncol = 3)
+dev.off()
+
+
+
 hla_selected_markers = c("HLA-DRA", "HLA-DPB1")
 mrp_selected_markers = c("MRPS10", "MRPL12", "MRPL14", "MRPS36", "MRPS5")
 nduf_selected_markers = c("NDUFAB1", "NDUFAF3", "NDUFA5", "NDUFS3", 
@@ -34,13 +58,14 @@ integrated_cancer_cell@meta.data[,c("hla_score", "mrp_score", "nduf_score",
 integrated_cancer_cell@meta.data[,c("hla_score1", "mrp_score2", "nduf_score3", 
                                       "mrp_nduf_score4", "emt_score5", "pt_score6")]
 
-p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+ggtitle("seurat_cluster")
+p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
+  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
 p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
 p3 = FeaturePlot(integrated_cancer_cell, features = c("hla_score", "mrp_score", 
                                                       "nduf_score", "mrp_nduf_score", 
                                                       "emt_score","pt_score"), ncol = 3, min.cutoff = -0.5, max.cutoff = 0.5)
 
-png("module_score_umaps_all_markers.png",24,12, units = "in", res = 300)
+png("module_score_umaps_all_g23_markers.png",24,12, units = "in", res = 300)
 ggarrange(
   ggarrange(p1, p2, nrow = 2), 
   p3,
@@ -50,7 +75,14 @@ ggarrange(
 dev.off()
 
 
-DefaultAssay(integrated_cancer_cell) = "RNA"
+
+
+
+#######################################################
+#Heatmaps
+#######################################################
+
+# module score heatmap
 mat = t(integrated_cancer_cell@meta.data[,c("hla_score", "mrp_score", "nduf_score", 
                                             "mrp_nduf_score", "emt_score", "pt_score")])
 mat = data.frame(mat, check.names = F)
@@ -118,6 +150,58 @@ ht = Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster
 
 png("module_score_heatmap.png", 25,12, units = "in", res = 300)
 draw(ht, heatmap_legend_side = "bottom", annotation_legend_side = "right")
+dev.off()
+
+
+# gene expression heatmap
+DefaultAssay(integrated_cancer_cell) = "RNA"
+integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
+cohort = integrated_cancer_cell
+mat = cohort[["RNA"]]@data
+mat = mat[c(hla_markers, mrp_markers, nduf_markers), ]
+mat = data.frame(mat, check.names = F)
+order_df = data.frame(cbind(pt = cohort$patient, stage = cohort$stage))
+order_df = arrange(order_df, pt)
+mat_new_order = mat[,rownames(order_df)]
+
+patient_colors = colorRampPalette(palette_color)(length(unique(cohort$patient)))
+names(patient_colors) = unique(cohort$patient)
+stage_colors = colorRampPalette(c("red", "green"))(length(unique(cohort$stage)))
+names(stage_colors) = unique(cohort$stage)
+top_anno = HeatmapAnnotation(
+  patient = order_df$pt,
+  stage = order_df$stage,
+  simple_anno_size = unit(1, "cm"),
+  show_annotation_name = FALSE,
+  col = list(patient = patient_colors, stage = stage_colors),
+  annotation_legend_param = list(
+    patient = list(
+      grid_height = unit(6, "mm"),
+      grid_width = unit(6, "mm"),
+      labels_gp = gpar(fontsize = 20),
+      title_gp = gpar(fontsize = 20, fontface = "bold")
+      # title_gap = unit(20, "mm"),
+      # title_position = "lefttop-rot",
+    ),
+    stage = list(
+      grid_height = unit(6, "mm"),
+      grid_width = unit(6, "mm"),
+      labels_gp = gpar(fontsize = 20),
+      title_gp = gpar(fontsize = 20, fontface = "bold")
+      # title_gap = unit(20, "mm"),
+      # title_position = "lefttop-rot",
+    )
+  )
+)
+col_fun = colorRamp2(c(0, 1, 2), c("blue", "black", "yellow"))
+
+png("test.png", 25,16, units = "in", res = 300)
+Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster_columns = F,
+        show_row_names = T, show_column_names = F, col = col_fun, name = "Expression"
+        #,column_gap = unit(3, "mm")
+        #,column_order = rownames(order_df)
+        #,column_split = order_df[,1:2]
+)
 dev.off()
 
 
