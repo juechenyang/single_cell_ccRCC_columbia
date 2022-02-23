@@ -11,10 +11,11 @@ integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
 #subclustering_umap
 all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
 all_types = str_sort(all_types)
-palette_color = c("chocolate1", "cyan", "gold", "aquamarine", "deepskyblue", 
+palette_color = c("chocolate1", "cyan", "gold", "aquamarine", "deepskyblue",
                   "cyan4", "darkblue", "darksalmon", "darkorchid1",
                   "goldenrod4", "firebrick4", "firebrick1", "darkolivegreen1","darkslategray", "darkmagenta")
 all_colors = colorRampPalette(palette_color)(length(all_types))
+# all_colors = colors()[seq(18,(length(all_types)-1)*6+18, 6)]
 names(all_colors) = all_types
 png("subclustering_umap.png",9,9, units = "in", res = 300)
 DimPlot(integrated_cancer_cell, reduction = "umap", 
@@ -148,7 +149,7 @@ ht = Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster
              )
 )
 
-png("module_score_heatmap.png", 25,12, units = "in", res = 300)
+png("module_score_all_g23_genes_heatmap.png", 25,12, units = "in", res = 300)
 draw(ht, heatmap_legend_side = "bottom", annotation_legend_side = "right")
 dev.off()
 
@@ -158,7 +159,10 @@ DefaultAssay(integrated_cancer_cell) = "RNA"
 integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 cohort = integrated_cancer_cell
 mat = cohort[["RNA"]]@data
-mat = mat[c(hla_markers, mrp_markers, nduf_markers), ]
+markers = c(hla_markers, mrp_markers, nduf_markers)
+markers_in_data = markers %in% rownames(mat)
+markers = markers[markers_in_data]
+mat = mat[markers, ]
 mat = data.frame(mat, check.names = F)
 order_df = data.frame(cbind(pt = cohort$patient, stage = cohort$stage))
 order_df = arrange(order_df, pt)
@@ -195,7 +199,7 @@ top_anno = HeatmapAnnotation(
 )
 col_fun = colorRamp2(c(0, 1, 2), c("blue", "black", "yellow"))
 
-png("test.png", 25,16, units = "in", res = 300)
+png("gene_expression_all_g23_heatmap.png", 25,16, units = "in", res = 300)
 Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster_columns = F,
         show_row_names = T, show_column_names = F, col = col_fun, name = "Expression"
         #,column_gap = unit(3, "mm")
