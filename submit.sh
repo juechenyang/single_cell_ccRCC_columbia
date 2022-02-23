@@ -1,6 +1,6 @@
 #BSUB -W 120:00
-#BSUB -M 96000
-#BSUB -n 4
+#BSUB -M 105000
+#BSUB -n 8
 #BSUB -R "span[hosts=1]"
 #BSUB -J jason_infercnv
 #BSUB -o /users/yanv5j/logs/%J.out
