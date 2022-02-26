@@ -17,7 +17,8 @@ if(!file.exists(InferCnv_output_exist_marker)){
                                       annotations_file=InfercnvInputs[[2]],
                                       delim="\t",
                                       gene_order_file=InfercnvInputs[[3]],
-                                      ref_group_names = c("Proximal Tubule")
+                                      ref_group_names = c("Proximal Tubule"),
+                                      max_cells_per_group = 2000
   )
   infercnv_obj = infercnv::run(infercnv_obj,
                                cutoff=0.1, # cutoff=1 works well for Smart-seq2, and cutoff=0.1 works well for 10x Genomics
