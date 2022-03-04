@@ -1,9 +1,15 @@
-#BSUB -W 120:00
-#BSUB -M 105000
-#BSUB -n 8
-#BSUB -R "span[hosts=1]"
-#BSUB -J jason_infercnv
-#BSUB -o /users/yanv5j/logs/%J.out
-#BSUB -e /users/yanv5j/logs/%J.err
+while getopts c:n:m: flag
+do
+    case "${flag}" in
+        c) command=${OPTARG};;
+        n) nThread=${OPTARG};;
+        m) memory=${OPTARG};;
+    esac
+done
+echo "number of thread: $nThread";
+echo "memory: $memory"
+echo "command is: $command"
 
-Rscript get_filtered_integrated_cancer_cells.R
+bsub -M $memory -n $nThread -W 120:00 -R "span[hosts=1]" \
+-J jason -o /users/yanv5j/logs/%J.out -e /users/yanv5j/logs/%J.err \
+"$command"
