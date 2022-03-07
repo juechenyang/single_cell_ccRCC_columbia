@@ -9,3 +9,4 @@ top_n_markers = all_markers %>% group_by(cluster) %>% top_n(n = top_n, wt = avg_
 
 # output top n markers
 write.csv(top_n_markers, "top_n_markers.csv", row.names = F)
+write.csv(all_markers, "all_markers.csv", row.names = F)
