@@ -96,9 +96,13 @@ integrated_cancer_cell@meta.data[,c("Complex_I", "Complex_II", "Complex_III",
 p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
   scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
 p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
-p3 = FeaturePlot(integrated_cancer_cell, features = c("Complex_I", "Complex_II", "Complex_III", 
-                                                      "Complex_IV", "Complex_V", "glycolyticAndTCA"), 
-                                                      ncol = 3, min.cutoff = -0.5, max.cutoff = 0.5)
+p3 = FeaturePlot(integrated_cancer_cell, 
+                 features = c("Complex_I", "Complex_II", "Complex_III", 
+                 "Complex_IV", "Complex_V", "glycolyticAndTCA"), 
+                 ncol = 3
+                 ,min.cutoff = -0.5
+                 ,max.cutoff = 0.5
+)
 
 png("module_score_extension_markers.png",24,12, units = "in", res = 300)
 ggarrange(
