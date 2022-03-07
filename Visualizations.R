@@ -2,6 +2,8 @@ source("call_libraries.R")
 source("Initialization.R")
 #load data
 integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
+DefaultAssay(integrated_cancer_cell) = "RNA"
+integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 
 
 #######################################################
@@ -11,11 +13,7 @@ integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
 #subclustering_umap
 all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
 all_types = str_sort(all_types)
-palette_color = c("chocolate1", "cyan", "gold", "aquamarine", "deepskyblue",
-                  "cyan4", "darkblue", "darksalmon", "darkorchid1",
-                  "goldenrod4", "firebrick4", "firebrick1", "darkolivegreen1","darkslategray", "darkmagenta")
 all_colors = colorRampPalette(palette_color)(length(all_types))
-# all_colors = colors()[seq(18,(length(all_types)-1)*6+18, 6)]
 names(all_colors) = all_types
 png("subclustering_umap.png",9,9, units = "in", res = 300)
 DimPlot(integrated_cancer_cell, reduction = "umap", 
@@ -27,8 +25,7 @@ dev.off()
 
 
 
-DefaultAssay(integrated_cancer_cell) = "RNA"
-integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
+
 marker_genes = c("VHL", "PBRM1","BAP1", "CA9", "HIF1A", "EPAS1")
 png("marker_genes_expression_umap.png",24,12, units = "in", res = 300)
 FeaturePlot(integrated_cancer_cell, features = marker_genes, ncol = 3)
@@ -67,6 +64,43 @@ p3 = FeaturePlot(integrated_cancer_cell, features = c("hla_score", "mrp_score",
                                                       "emt_score","pt_score"), ncol = 3, min.cutoff = -0.5, max.cutoff = 0.5)
 
 png("module_score_umaps_all_g23_markers.png",24,12, units = "in", res = 300)
+ggarrange(
+  ggarrange(p1, p2, nrow = 2), 
+  p3,
+  ncol = 2,
+  widths = c(1,3)
+)
+dev.off()
+
+
+
+all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
+all_types = str_sort(all_types)
+all_colors = colorRampPalette(palette_color)(length(all_types))
+names(all_colors) = all_types
+integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
+                                        features = list(Complex_I, 
+                                                        Complex_II, 
+                                                        Complex_III, 
+                                                        Complex_IV, 
+                                                        Complex_V,
+                                                        glycolyticAndTCA), 
+                                        assay = "RNA", 
+                                        name = c("Complex_I", "Complex_II", "Complex_III", 
+                                                 "Complex_IV", "Complex_V", "glycolyticAndTCA"))
+integrated_cancer_cell@meta.data[,c("Complex_I", "Complex_II", "Complex_III", 
+                                    "Complex_IV", "Complex_V", "glycolyticAndTCA")] = 
+  integrated_cancer_cell@meta.data[,c("Complex_I1", "Complex_II2", "Complex_III3", 
+                                      "Complex_IV4", "Complex_V5", "glycolyticAndTCA6")]
+
+p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
+  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
+p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
+p3 = FeaturePlot(integrated_cancer_cell, features = c("Complex_I", "Complex_II", "Complex_III", 
+                                                      "Complex_IV", "Complex_V", "glycolyticAndTCA"), 
+                                                      ncol = 3, min.cutoff = -0.5, max.cutoff = 0.5)
+
+png("module_score_extension_markers.png",24,12, units = "in", res = 300)
 ggarrange(
   ggarrange(p1, p2, nrow = 2), 
   p3,

@@ -39,3 +39,7 @@ glycolyticAndTCA = c("ACO1","ACO2","ALDOA","ALDOB","ALDOC","BPGM","CS","CYB5R1",
                      "PGAM1","PGAM2","PGK1","PGK2","PKLR","PPA1","PPA2","SCO1",
                      "SLC25A11","SLC25A13","SLC2A1","SLC2A2","SLC2A3","SLC2A4","TPI1")
 
+palette_color = c("firebrick1", "darkorange", "gold", 
+                  "chartreuse", "blue", "mediumorchid1", 
+                  "cyan", "lightpink", "sienna4")
+
