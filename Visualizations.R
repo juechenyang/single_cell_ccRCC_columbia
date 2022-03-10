@@ -117,7 +117,11 @@ p3 = FeaturePlot(integrated_cancer_cell,
 )
 
 p3 = lapply(p3, function(x){
-  return(x + scale_colour_gradient2(mid = "grey",limits = c(-0.5, 0.5)))
+  return(x + scale_colour_gradient2(
+                                    high = "gold"
+                                   ,low = "blue"
+                                   ,mid = "grey"
+                                   ,limits = c(-0.5, 0.5)))
 })
 
 plot_List = append(list(p1,p2), p3)
@@ -126,6 +130,58 @@ ggarrange(
   plotlist = plot_List
   ,ncol = 5
   ,nrow = 4
+)
+dev.off()
+
+
+#add raw count data for composite markers
+all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
+all_types = str_sort(all_types)
+all_colors = colorRampPalette(palette_color)(length(all_types))
+names(all_colors) = all_types
+AddRawCount = function(object, gene_list){
+  mat = object[["RNA"]]@counts
+  result_list = list()
+  for(x in 1:length(gene_list)){
+    selected_genes = gene_list[[x]]
+    marker_tag = names(gene_list[x])
+    is_in_mat = selected_genes %in% rownames(mat)
+    if(!all(is_in_mat)){
+      not_available_genes = selected_genes[!is_in_mat]
+      print(paste0(paste(not_available_genes, collapse = ","), 
+                   " is not available for analysis"))
+    }
+    selected_genes = selected_genes[is_in_mat]
+    selected_mat = mat[selected_genes, ]
+    composite_marker_exp = as.numeric(apply(selected_mat, MARGIN = 2, FUN = sum))
+    marker_tag = paste0(marker_tag,"_counts")
+    result_list[[marker_tag]] = composite_marker_exp
+  }
+  result_list = as.data.frame(result_list)
+  rownames(result_list) = colnames(x=object)
+  object[[colnames(x = result_list)]] <- result_list
+  return(object)
+}
+
+integrated_cancer_cell = AddRawCount(integrated_cancer_cell, signature_list)
+
+p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
+  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
+p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
+p3 = FeaturePlot(integrated_cancer_cell, 
+                 features = paste0(signature_list_names, "_counts"), 
+                 ncol = 5
+                 # ,min.cutoff = -0.5
+                 # ,max.cutoff = 0.5
+                 # ,combine = F
+)
+
+png("raw_count_umaps_extension_markers.png",22,12, units = "in", res = 400)
+ggarrange(
+  ggarrange(p1, p2, nrow = 2), 
+  p3,
+  ncol = 2,
+  widths = c(1,3)
 )
 dev.off()
 
