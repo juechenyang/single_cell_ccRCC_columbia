@@ -78,38 +78,54 @@ all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
 all_types = str_sort(all_types)
 all_colors = colorRampPalette(palette_color)(length(all_types))
 names(all_colors) = all_types
+signature_list = list("MT" = MT
+                      ,"Complex_I"=Complex_I
+                      ,"Complex_II"=Complex_II
+                      ,"Complex_III"=Complex_III
+                      ,"Complex_IV"=Complex_IV
+                      ,"Complex_V"=Complex_V
+                      ,"TCA"=TCA
+                      ,"glycolysis"=glycolysis
+                      ,"glycolyticAndTCA"=glycolyticAndTCA
+                      ,"MAS"=MAS
+                      ,"HIF1A" = HIF1A
+                      ,"CU"=CU
+                      ,"EMT"=EMT
+                      ,"HIF1A_2A"=HIF1A_2A
+                      ,"HLA"=HLA
+                      ,"MRP"=MRP
+                      ,"MRP_positive"=MRP_positive
+                      ,"MRP_negative"=MRP_negative
+)
+signature_list_names = names(signature_list)
 integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
-                                        features = list(Complex_I, 
-                                                        Complex_II, 
-                                                        Complex_III, 
-                                                        Complex_IV, 
-                                                        Complex_V,
-                                                        glycolyticAndTCA), 
+                                        features = signature_list, 
                                         assay = "RNA", 
-                                        name = c("Complex_I", "Complex_II", "Complex_III", 
-                                                 "Complex_IV", "Complex_V", "glycolyticAndTCA"))
-integrated_cancer_cell@meta.data[,c("Complex_I", "Complex_II", "Complex_III", 
-                                    "Complex_IV", "Complex_V", "glycolyticAndTCA")] = 
-  integrated_cancer_cell@meta.data[,c("Complex_I1", "Complex_II2", "Complex_III3", 
-                                      "Complex_IV4", "Complex_V5", "glycolyticAndTCA6")]
+                                        name = signature_list_names)
+integrated_cancer_cell@meta.data[,signature_list_names] = 
+  integrated_cancer_cell@meta.data[,paste0(signature_list_names, 1:length(signature_list_names))]
 
 p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
   scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
 p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
 p3 = FeaturePlot(integrated_cancer_cell, 
-                 features = c("Complex_I", "Complex_II", "Complex_III", 
-                 "Complex_IV", "Complex_V", "glycolyticAndTCA"), 
-                 ncol = 3
+                 features = signature_list_names, 
+                 ncol = 4
                  ,min.cutoff = -0.5
                  ,max.cutoff = 0.5
+                 ,combine = F
 )
 
-png("module_score_extension_markers.png",24,12, units = "in", res = 300)
+p3 = lapply(p3, function(x){
+  return(x + scale_colour_gradient2(limits = c(-0.5, 0.5)))
+})
+
+plot_List = append(list(p1,p2), p3)
+png("module_score_extension_markers.png",20,15, units = "in", res = 300)
 ggarrange(
-  ggarrange(p1, p2, nrow = 2), 
-  p3,
-  ncol = 2,
-  widths = c(1,3)
+  plotlist = plot_List
+  ,ncol = 5
+  ,nrow = 4
 )
 dev.off()
 
