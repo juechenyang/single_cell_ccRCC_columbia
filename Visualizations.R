@@ -117,11 +117,11 @@ p3 = FeaturePlot(integrated_cancer_cell,
 )
 
 p3 = lapply(p3, function(x){
-  return(x + scale_colour_gradient2(limits = c(-0.5, 0.5)))
+  return(x + scale_colour_gradient2(mid = "grey",limits = c(-0.5, 0.5)))
 })
 
 plot_List = append(list(p1,p2), p3)
-png("module_score_extension_markers.png",20,15, units = "in", res = 300)
+png("module_score_extension_markers.png",22,14, units = "in", res = 400)
 ggarrange(
   plotlist = plot_List
   ,ncol = 5
