@@ -123,13 +123,13 @@ p3 = lapply(p3, function(x){
                                    ,mid = "grey"
                                    ,limits = c(-0.5, 0.5)))
 })
-
-plot_List = append(list(p1,p2), p3)
-png("module_score_extension_markers.png",22,14, units = "in", res = 400)
+p4 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "stage")
+plot_List = append(list(p1,p2,p4), p3)
+png("module_score_extension_markers.png",25,10, units = "in", res = 400)
 ggarrange(
   plotlist = plot_List
-  ,ncol = 5
-  ,nrow = 4
+  ,ncol = 7
+  ,nrow = 3
 )
 dev.off()
 
@@ -149,7 +149,7 @@ AddRawCount = function(object, gene_list){
     }
     selected_genes = selected_genes[is_in_mat]
     selected_mat = mat[selected_genes, ]
-    composite_marker_exp = as.numeric(apply(selected_mat, MARGIN = 2, FUN = sum))
+    composite_marker_exp = as.numeric(apply(selected_mat, MARGIN = 2, FUN = mean))
     marker_tag = paste0(marker_tag,"_counts")
     result_list[[marker_tag]] = composite_marker_exp
   }
@@ -165,19 +165,29 @@ p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_
   scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
 p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
 p3 = FeaturePlot(integrated_cancer_cell, 
-                 features = paste0(signature_list_names, "_counts"), 
-                 ncol = 5
+                 features = paste0(signature_list_names, "_counts") 
+                 # ,ncol = 5
                  # ,min.cutoff = -0.5
                  # ,max.cutoff = 0.5
-                 # ,combine = F
+                 ,combine = F
 )
 
-png("raw_count_umaps_extension_markers.png",22,12, units = "in", res = 400)
+p3 = lapply(p3, function(x){
+  return(x + scale_colour_gradient2(
+    high = "yellow"
+    ,mid = "gold4"
+    ,low = "gray83"
+    # ,midpoint = 0.75
+    # ,limits = c(0, 1.5)
+  ))
+})
+p4 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "stage")
+plot_List = append(list(p1,p2,p4), p3)
+png("raw_count_umaps_extension_markers.png",25,10, units = "in", res = 400)
 ggarrange(
-  ggarrange(p1, p2, nrow = 2), 
-  p3,
-  ncol = 2,
-  widths = c(1,3)
+  plotlist = plot_List
+  ,ncol = 7
+  ,nrow = 3
 )
 dev.off()
 
@@ -215,28 +225,29 @@ p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
 p3 = FeaturePlot(integrated_cancer_cell, 
                  features = paste0(signature_list_names, "_normalize") 
                  # ,ncol = 5
-                 ,min.cutoff = 0
-                 ,max.cutoff = 1.5
+                 # ,min.cutoff = 0
+                 # ,max.cutoff = 1.5
                  ,combine = F
 )
 
 
 p3 = lapply(p3, function(x){
-  return(x + scale_colour_gradient(
-    high = "blue4"
-#    ,mid = "gold4"
-    ,low = "gray83"
-#    ,midpoint = 0.75
-    ,limits = c(0, 1.5)
+  return(x + scale_colour_gradient2(
+      high = "yellow"
+      ,mid = "gold4"
+      ,low = "gray83"
+      # ,midpoint = 0.75
+      # ,limits = c(0, 1.5)
     ))
 })
+p4 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "stage")
 
-plot_List = append(list(p1,p2), p3)
-png("normalize_count_umaps_extension_markers.png",22,12, units = "in", res = 400)
+plot_List = append(list(p1,p2,p4), p3)
+png("normalize_no_scale_count_umaps_extension_markers.png",25,10, units = "in", res = 400)
 ggarrange(
   plotlist = plot_List
-  ,ncol = 5
-  ,nrow = 4
+  ,ncol = 7
+  ,nrow = 3
 )
 dev.off()
 
