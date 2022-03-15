@@ -11,8 +11,10 @@ integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 #######################################################
 
 #subclustering_umap
-all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
-all_types = str_sort(all_types)
+target_res = 0.3
+target_res_para = paste0("integrated_snn_res.", target_res)
+all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
+all_types = sort(all_types)
 all_colors = colorRampPalette(palette_color)(length(all_types))
 names(all_colors) = all_types
 png("subclustering_umap.png",9,9, units = "in", res = 300)
