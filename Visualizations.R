@@ -1,7 +1,12 @@
 source("call_libraries.R")
 source("Initialization.R")
 #load data
+#integrated_cancer_cell = readRDS("integrated_cancer_cells_noSCT.rds")
 integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
+DefaultAssay(integrated_cancer_cell) = "integrated"
+integrated_cancer_cell = FindClusters(integrated_cancer_cell, 
+                                      resolution = seq(0.05,0.3, 0.05),
+                                      algorithm = 4)
 DefaultAssay(integrated_cancer_cell) = "RNA"
 integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 
@@ -11,7 +16,7 @@ integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 #######################################################
 
 #subclustering_umap
-target_res = 0.3
+target_res = 0.2
 target_res_para = paste0("integrated_snn_res.", target_res)
 all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
 all_types = sort(all_types)
@@ -76,8 +81,11 @@ dev.off()
 
 
 
-all_types = as.character(unique(integrated_cancer_cell$integrated_snn_res.0.2))
-all_types = str_sort(all_types)
+#subclustering_umap
+target_res = 0.2
+target_res_para = paste0("integrated_snn_res.", target_res)
+all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
+all_types = sort(all_types)
 all_colors = colorRampPalette(palette_color)(length(all_types))
 names(all_colors) = all_types
 signature_list = list("MT" = MT
@@ -107,7 +115,7 @@ integrated_cancer_cell = AddModuleScore(integrated_cancer_cell,
 integrated_cancer_cell@meta.data[,signature_list_names] = 
   integrated_cancer_cell@meta.data[,paste0(signature_list_names, 1:length(signature_list_names))]
 
-p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
+p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = target_res_para)+
   scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
 p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
 p3 = FeaturePlot(integrated_cancer_cell, 
