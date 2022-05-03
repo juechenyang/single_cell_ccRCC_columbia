@@ -263,6 +263,62 @@ dev.off()
 
 
 
+#split by stage umaps
+target_res = 0.2
+target_res_para = paste0("integrated_snn_res.", target_res)
+all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
+all_types = sort(all_types)
+all_colors = colorRampPalette(palette_color)(length(all_types))
+names(all_colors) = all_types
+cluster_maps = DimPlot(integrated_cancer_cell, reduction = "umap",combine = F, 
+                       group.by = "integrated_snn_res.0.2", split.by = "stage")
+cluster_maps = lapply(cluster_maps, function(x){
+  return(x + scale_color_manual(breaks = all_types, values=all_colors[all_types]))
+})
+
+
+
+#split view feature umap
+target_res = 0.2
+target_res_para = paste0("integrated_snn_res.", target_res)
+all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
+all_types = sort(all_types)
+all_colors = colorRampPalette(palette_color)(length(all_types))
+names(all_colors) = all_types
+signature_list = list("MT" = MT
+                      ,"Complex_I"=Complex_I
+                      ,"Complex_II"=Complex_II
+                      ,"Complex_III"=Complex_III
+                      ,"Complex_IV"=Complex_IV
+                      ,"TCA"=TCA
+                      ,"glycolysis"=glycolysis
+                      ,"HIF1A" = HIF1A
+                      ,"HLA"=HLA
+                      ,"MRP_positive"=MRP_positive
+)
+signature_list_names = names(signature_list)
+integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
+                                        features = signature_list, 
+                                        assay = "RNA", 
+                                        name = signature_list_names)
+feature_plots = FeaturePlot(integrated_cancer_cell, 
+                            features = signature_list_names,
+                            split.by = "stage",
+                            ncol = 4
+                            ,min.cutoff = -0.5
+                            ,max.cutoff = 0.5
+                            ,combine = F
+)
+
+feature_plots = lapply(p3, function(x){
+  return(x + scale_colour_gradient2(
+    high = "gold"
+    ,low = "blue"
+    ,mid = "grey"
+    ,limits = c(-0.5, 0.5)))
+})
+
+
 
 
 #######################################################
