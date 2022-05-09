@@ -1,51 +1,37 @@
 source("call_libraries.R")
 source("Initialization.R")
+source("gsea_tools.R")
 #plan("multicore", workers = 6)
 integrated_cancer_cells = readRDS("integrated_cancer_cells.rds")
-Idents(integrated_cancer_cells) = as.character(integrated_cancer_cells$integrated_snn_res.0.2)
-inCluster6 = integrated_cancer_cells$integrated_snn_res.0.2==6
 DefaultAssay(integrated_cancer_cells) = "RNA"
-integrated_cancer_cells = ScaleData(integrated_cancer_cells)
-mat = data.frame(integrated_cancer_cells[["RNA"]]@scale.data, check.names = F)
-t_value = apply(mat, MARGIN = 1, FUN = function(x){
-  cluster6 = x[inCluster6]
-  other = x[!inCluster6]
-  t_result = t.test(cluster6, other)
-  return(t_result$statistic)
-})
-
-#gsea function
-library(clusterProfiler)
-library(org.Hs.eg.db)
-run_gsea_kegg = function(correlated_gene_vector){
-  #input: correlated_gene_vector
-  #input_type: named numerical vector with name as genes
-  ids<-bitr(names(correlated_gene_vector), fromType = "SYMBOL", toType = "ENTREZID", 
-            OrgDb=org.Hs.eg.db)
-  #remove duplicated gene symbol
-  dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
-  correlated_gene_vector = correlated_gene_vector[names(correlated_gene_vector)
-                                                  %in% dedup_ids$SYMBOL]
-  #rename vector with ENTREZID
-  names(correlated_gene_vector) = dedup_ids$ENTREZID
-  #sort correlated gene by descending order
-  correlated_gene_vector = sort(correlated_gene_vector, decreasing = T)
-  
-  #run GSEA KEGG terms
-  GSEA_kegg <- gseKEGG(geneList = correlated_gene_vector,
-                       organism     = "hsa",
-                       minGSSize    = 10,
-                       maxGSSize    = 1000,
-                       pvalueCutoff = 0.05,
-                       pAdjustMethod = "none",
-                       keyType       = "ncbi-geneid")
-  
-  return(GSEA_kegg)
+integrated_cancer_cells = NormalizeData(integrated_cancer_cells)
+#Idents(integrated_cancer_cells) = as.character(integrated_cancer_cells$integrated_snn_res.0.2)
+plot_list = list()
+for(x in 0:9){
+  inCluster = integrated_cancer_cells$integrated_snn_res.0.2==x
+  mat = data.frame(integrated_cancer_cells[["RNA"]]@data, check.names = F)
+  t_value = apply(mat, MARGIN = 1, FUN = function(x){
+    cluster = x[inCluster]
+    other = x[!inCluster]
+    t_result = t.test(cluster, other)
+    return(t_result$statistic)
+  })
+  gsea_obj = run_gsea_kegg(t_value)
+  #png("gsea_cluster6.png", width = 10, height = 10, units = "in", res = 300)
+  plot_title = paste0("cluster ", x, "enrichment_dotplot")
+  each_cluster_plot = dotplot(gsea_obj, showCategory = 10, 
+                              title = plot_title , split=".sign")+ facet_grid(.~.sign)
+  plot_list = append(plot_list, list(each_cluster_plot))
 }
 
-gsea_obj = run_gsea_kegg(t_value)
-dotplot(gsea_obj, showCategory = 10, 
-        title = "Enriched Pathways" , split=".sign")+ facet_grid(.~.sign)
+png("gsea_plots.png", units = "in", res = 400, 
+    width = 32, height = 24)
+ggarrange(
+  plotlist = plot_list,
+  ncol = 4,
+  nrow = 3
+)
+dev.off()
 
 
 

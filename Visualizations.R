@@ -6,7 +6,7 @@ integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
 DefaultAssay(integrated_cancer_cell) = "integrated"
 integrated_cancer_cell = FindClusters(integrated_cancer_cell, 
                                       resolution = seq(0.05,0.3, 0.05),
-                                      algorithm = 4)
+                                      algorithm = 1)
 DefaultAssay(integrated_cancer_cell) = "RNA"
 integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 
@@ -263,28 +263,6 @@ dev.off()
 
 
 
-#split by stage umaps
-target_res = 0.2
-target_res_para = paste0("integrated_snn_res.", target_res)
-all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
-all_types = sort(all_types)
-all_colors = colorRampPalette(palette_color)(length(all_types))
-names(all_colors) = all_types
-cluster_maps = DimPlot(integrated_cancer_cell, reduction = "umap",combine = F, 
-                       group.by = "integrated_snn_res.0.2", split.by = "stage")
-cluster_maps = lapply(cluster_maps, function(x){
-  return(x + scale_color_manual(breaks = all_types, values=all_colors[all_types]))
-})
-
-
-
-#split view feature umap
-target_res = 0.2
-target_res_para = paste0("integrated_snn_res.", target_res)
-all_types = unique(integrated_cancer_cell[[target_res_para]])[[target_res_para]]
-all_types = sort(all_types)
-all_colors = colorRampPalette(palette_color)(length(all_types))
-names(all_colors) = all_types
 signature_list = list("MT" = MT
                       ,"Complex_I"=Complex_I
                       ,"Complex_II"=Complex_II
@@ -292,31 +270,117 @@ signature_list = list("MT" = MT
                       ,"Complex_IV"=Complex_IV
                       ,"TCA"=TCA
                       ,"glycolysis"=glycolysis
-                      ,"HIF1A" = HIF1A
+                      ,"HIF_1A" = HIF1A
                       ,"HLA"=HLA
                       ,"MRP_positive"=MRP_positive
 )
 signature_list_names = names(signature_list)
 integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
-                                        features = signature_list, 
-                                        assay = "RNA", 
-                                        name = signature_list_names)
-feature_plots = FeaturePlot(integrated_cancer_cell, 
-                            features = signature_list_names,
-                            split.by = "stage",
-                            ncol = 4
-                            ,min.cutoff = -0.5
-                            ,max.cutoff = 0.5
-                            ,combine = F
-)
+                                              features = signature_list, 
+                                              assay = "RNA", 
+                                              name = signature_list_names)
+integrated_cancer_cell@meta.data[,signature_list_names] = 
+integrated_cancer_cell@meta.data[,paste0(signature_list_names, 1:length(signature_list_names))]
 
-feature_plots = lapply(p3, function(x){
-  return(x + scale_colour_gradient2(
-    high = "gold"
-    ,low = "blue"
-    ,mid = "grey"
-    ,limits = c(-0.5, 0.5)))
+integrated_cancer_cell$metastatic_status = 
+  ifelse(integrated_cancer_cell$patient=="Patient5", "metastasis", "non-metastasis")
+
+integrated_cancer_cell$MT_group = 
+  sapply(integrated_cancer_cell$MT, FUN = function(x){
+  if(x < -0.25){
+    return("lower than -0.25")
+  }else if(x > 0.25){
+    return("higher than 0.25")
+  }else{
+    return("between -0.25 and 0.25")
+  }
 })
+
+integrated_cancer_cell$Complex_II_group = 
+  sapply(integrated_cancer_cell$Complex_II, FUN = function(x){
+    if(x < -0.25){
+      return("lower than -0.25")
+    }else if(x > 0.25){
+      return("higher than 0.25")
+    }else{
+      return("between -0.25 and 0.25")
+    }
+  })
+
+DimPlot(integrated_cancer_cell, group.by = "stage", 
+        split.by = "Complex_II_group", reduction = "umap")+ggtitle("")
+DimPlot(integrated_cancer_cell, group.by = "stage", 
+        split.by = "Complex_I_group", reduction = "umap")+
+        ggtitle("Complex I stratification")
+
+FeaturePlot(integrated_cancer_cell, features = "Complex_I_group",
+            split.by = "stage",
+            reduction = "umap")+ggtitle("")
+
+#split by stage umaps
+all_plots = list()
+for(x in c("metastasis", "non-metastasis")){
+  integrated_cancer_cell_stage = subset(integrated_cancer_cell, subset = metastatic_status == x)
+  target_res = 0.2
+  target_res_para = paste0("integrated_snn_res.", target_res)
+  all_types = unique(integrated_cancer_cell_stage[[target_res_para]])[[target_res_para]]
+  all_types = sort(all_types)
+  all_colors = colorRampPalette(palette_color)(length(all_types))
+  names(all_colors) = all_types
+  cluster_maps = DimPlot(integrated_cancer_cell_stage, reduction = "umap",
+                         group.by = "integrated_snn_res.0.2")+
+                         scale_color_manual(
+                           breaks = all_types, 
+                           values=all_colors[all_types])+ggtitle(x)
+  all_plots = append(all_plots, list(cluster_maps))
+  
+  feature_plots = FeaturePlot(integrated_cancer_cell_stage, 
+                              features = signature_list_names,
+                              ncol = 4
+                              ,min.cutoff = -0.5
+                              ,max.cutoff = 0.5
+                              ,combine = F
+  )
+  feature_plots = lapply(feature_plots, function(x){
+    return(x + scale_colour_gradient2(
+      high = "gold"
+      ,low = "blue"
+      ,mid = "grey"
+      ,limits = c(-0.5, 0.5)))
+  })
+  all_plots = append(all_plots, feature_plots)
+}
+
+
+png("split_by_metastasis.png",width = 45, height = 8, units = "in", res = 400)
+ggarrange(
+  plotlist = all_plots
+  ,ncol = 11
+  ,nrow = 2
+)
+dev.off()
+
+png("test.png",width = 16, height = 20, units = "in", res = 400)
+FeaturePlot(integrated_cancer_cell, 
+            features = CoQ10
+            ,ncol=2
+            ,min.cutoff = -0.5
+            ,max.cutoff = 0.5
+            ,split.by = "stage"
+)
+dev.off()
+
+condition = "pT1b"
+selected_cells = integrated_cancer_cell$stage==condition
+hist(integrated_cancer_cell@meta.data[selected_cells, "Complex_I"], breaks = 100,
+     main = paste0(condition, "_Complex_III"))
+
+condition = "metastasis"
+selected_cells = integrated_cancer_cell$metastatic_status==condition
+hist(integrated_cancer_cell@meta.data[selected_cells, "Complex_I"], breaks = 100,
+     main = paste0(condition, "_Complex_III"))
+
+
 
 
 
