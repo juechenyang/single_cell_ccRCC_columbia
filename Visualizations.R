@@ -1,15 +1,132 @@
 source("call_libraries.R")
 source("Initialization.R")
-#load data
-#integrated_cancer_cell = readRDS("integrated_cancer_cells_noSCT.rds")
 integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
-DefaultAssay(integrated_cancer_cell) = "integrated"
-integrated_cancer_cell = FindClusters(integrated_cancer_cell, 
-                                      resolution = seq(0.05,0.3, 0.05),
-                                      algorithm = 1)
 DefaultAssay(integrated_cancer_cell) = "RNA"
 integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
+#add metastatic status for each cell
+integrated_cancer_cell$metastatic_status = 
+  ifelse(integrated_cancer_cell$patient=="Patient5", "Metastatic", "Non_metastatic")
 
+#add module score to selected signature
+signature_list = list("MT" = MT
+                      ,"Complex_I"=Complex_I
+                      ,"Complex_II"=Complex_II
+                      ,"Complex_III"=Complex_III
+                      ,"Complex_IV"=Complex_IV
+                      ,"TCA"=TCA
+                      ,"glycolysis"=glycolysis
+                      ,"HIF_1A" = HIF1A
+                      ,"HLA"=HLA
+                      ,"MRP_positive"=MRP_positive
+)
+signature_list_names = names(signature_list)
+integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
+                                        features = signature_list, 
+                                        assay = "RNA", 
+                                        name = signature_list_names)
+integrated_cancer_cell@meta.data[,signature_list_names] = 
+integrated_cancer_cell@meta.data[,paste0(signature_list_names, 1:length(signature_list_names))]
+#remove redundant features
+remove_column_index = match(paste0(signature_list_names, 1:length(signature_list_names)),
+                            names(integrated_cancer_cell@meta.data))
+integrated_cancer_cell@meta.data = 
+integrated_cancer_cell@meta.data[,-remove_column_index]
+
+#draw feature plots without scaling for all module signature
+feature_plots = FeaturePlot(integrated_cancer_cell, 
+                            features = signature_list_names
+#                            ,ncol = 4
+#                            ,min.cutoff = -0.5
+#                            ,max.cutoff = 0.5
+                            ,combine = F
+)
+feature_plots = lapply(feature_plots, function(x){
+  return(x + scale_colour_gradient2(
+    high = "gold"
+    ,low = "blue"
+    ,mid = "grey"
+#   ,limits = c(-0.5, 0.5)
+   ))
+})
+
+png("test.png",width = 16, height = 12, units = "in", res = 400)
+ggarrange(
+  plotlist = feature_plots
+  ,ncol = 4
+  ,nrow = 3
+)
+dev.off()
+
+integrated_cancer_cell@meta.data[,paste0(signature_list_names, "_group")] = 
+lapply(integrated_cancer_cell@meta.data[,signature_list_names], FUN = function(vx){
+  vx = sapply(vx, FUN = function(x){
+    if(x < -0.25){
+      return("lower than -0.25")
+    }else if(x > 0.25){
+      return("higher than 0.25")
+    }else{
+      return("between -0.25 and 0.25")
+    }
+  })
+})
+  
+
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+
+
+#plot through split view
+all_plots = list()
+for(x in c("metastasis", "non-metastasis")){
+  integrated_cancer_cell_stage = subset(integrated_cancer_cell, subset = metastatic_status == x)
+  target_res = 0.2
+  target_res_para = paste0("integrated_snn_res.", target_res)
+  all_types = unique(integrated_cancer_cell_stage[[target_res_para]])[[target_res_para]]
+  all_types = sort(all_types)
+  all_colors = colorRampPalette(palette_color)(length(all_types))
+  names(all_colors) = all_types
+  cluster_maps = DimPlot(integrated_cancer_cell_stage, reduction = "umap",
+                         group.by = "integrated_snn_res.0.2")+
+    scale_color_manual(
+      breaks = all_types, 
+      values=all_colors[all_types])+ggtitle(x)
+  all_plots = append(all_plots, list(cluster_maps))
+  
+  feature_plots = FeaturePlot(integrated_cancer_cell_stage, 
+                              features = signature_list_names,
+                              ncol = 4
+                              ,min.cutoff = -0.5
+                              ,max.cutoff = 0.5
+                              ,combine = F
+  )
+  feature_plots = lapply(feature_plots, function(x){
+    return(x + scale_colour_gradient2(
+      high = "gold"
+      ,low = "blue"
+      ,mid = "grey"
+      ,limits = c(-0.5, 0.5)))
+  })
+  all_plots = append(all_plots, feature_plots)
+}
+
+
+png("split_by_metastasis.png",width = 45, height = 8, units = "in", res = 400)
+ggarrange(
+  plotlist = all_plots
+  ,ncol = 11
+  ,nrow = 2
+)
+dev.off()
 
 #######################################################
 #Umaps
@@ -25,58 +142,7 @@ names(all_colors) = all_types
 png("subclustering_umap.png",9,9, units = "in", res = 300)
 DimPlot(integrated_cancer_cell, reduction = "umap", 
         group.by = "integrated_snn_res.0.2")+
-  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
-dev.off()
-
-
-
-
-
-
-marker_genes = c("VHL", "PBRM1","BAP1", "CA9", "HIF1A", "EPAS1")
-png("marker_genes_expression_umap.png",24,12, units = "in", res = 300)
-FeaturePlot(integrated_cancer_cell, features = marker_genes, ncol = 3)
-dev.off()
-
-
-
-hla_selected_markers = c("HLA-DRA", "HLA-DPB1")
-mrp_selected_markers = c("MRPS10", "MRPL12", "MRPL14", "MRPS36", "MRPS5")
-nduf_selected_markers = c("NDUFAB1", "NDUFAF3", "NDUFA5", "NDUFS3", 
-                          "ATP5MC1","ATP5MC2","COA3","UQCRC1")
-# hla_markers = hla_selected_markers
-# mrp_markers = mrp_selected_markers
-# nduf_markers = nduf_selected_markers
-
-integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
-                                        features = list(hla_markers, 
-                                                        mrp_markers, 
-                                                        nduf_markers, 
-                                                        c(mrp_markers, nduf_markers), 
-                                                        EMT_markers,
-                                                        PT_markers), 
-                                        assay = "RNA", 
-                                        name = c("hla_score", "mrp_score", "nduf_score", 
-                                                 "mrp_nduf_score", "emt_score", "pt_score"))
-integrated_cancer_cell@meta.data[,c("hla_score", "mrp_score", "nduf_score",
-                                    "mrp_nduf_score", "emt_score", "pt_score")] = 
-integrated_cancer_cell@meta.data[,c("hla_score1", "mrp_score2", "nduf_score3", 
-                                      "mrp_nduf_score4", "emt_score5", "pt_score6")]
-
-p1 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "integrated_snn_res.0.2")+
-  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
-p2 = DimPlot(integrated_cancer_cell, reduction = "umap", group.by = "patient")
-p3 = FeaturePlot(integrated_cancer_cell, features = c("hla_score", "mrp_score", 
-                                                      "nduf_score", "mrp_nduf_score", 
-                                                      "emt_score","pt_score"), ncol = 3, min.cutoff = -0.5, max.cutoff = 0.5)
-
-png("module_score_umaps_all_g23_markers.png",24,12, units = "in", res = 300)
-ggarrange(
-  ggarrange(p1, p2, nrow = 2), 
-  p3,
-  ncol = 2,
-  widths = c(1,3)
-)
+  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain clusters")
 dev.off()
 
 
@@ -263,38 +329,11 @@ dev.off()
 
 
 
-signature_list = list("MT" = MT
-                      ,"Complex_I"=Complex_I
-                      ,"Complex_II"=Complex_II
-                      ,"Complex_III"=Complex_III
-                      ,"Complex_IV"=Complex_IV
-                      ,"TCA"=TCA
-                      ,"glycolysis"=glycolysis
-                      ,"HIF_1A" = HIF1A
-                      ,"HLA"=HLA
-                      ,"MRP_positive"=MRP_positive
-)
-signature_list_names = names(signature_list)
-integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
-                                              features = signature_list, 
-                                              assay = "RNA", 
-                                              name = signature_list_names)
-integrated_cancer_cell@meta.data[,signature_list_names] = 
-integrated_cancer_cell@meta.data[,paste0(signature_list_names, 1:length(signature_list_names))]
 
-integrated_cancer_cell$metastatic_status = 
-  ifelse(integrated_cancer_cell$patient=="Patient5", "metastasis", "non-metastasis")
 
-integrated_cancer_cell$MT_group = 
-  sapply(integrated_cancer_cell$MT, FUN = function(x){
-  if(x < -0.25){
-    return("lower than -0.25")
-  }else if(x > 0.25){
-    return("higher than 0.25")
-  }else{
-    return("between -0.25 and 0.25")
-  }
-})
+
+
+
 
 integrated_cancer_cell$Complex_II_group = 
   sapply(integrated_cancer_cell$Complex_II, FUN = function(x){
@@ -318,47 +357,7 @@ FeaturePlot(integrated_cancer_cell, features = "Complex_I_group",
             reduction = "umap")+ggtitle("")
 
 #split by stage umaps
-all_plots = list()
-for(x in c("metastasis", "non-metastasis")){
-  integrated_cancer_cell_stage = subset(integrated_cancer_cell, subset = metastatic_status == x)
-  target_res = 0.2
-  target_res_para = paste0("integrated_snn_res.", target_res)
-  all_types = unique(integrated_cancer_cell_stage[[target_res_para]])[[target_res_para]]
-  all_types = sort(all_types)
-  all_colors = colorRampPalette(palette_color)(length(all_types))
-  names(all_colors) = all_types
-  cluster_maps = DimPlot(integrated_cancer_cell_stage, reduction = "umap",
-                         group.by = "integrated_snn_res.0.2")+
-                         scale_color_manual(
-                           breaks = all_types, 
-                           values=all_colors[all_types])+ggtitle(x)
-  all_plots = append(all_plots, list(cluster_maps))
-  
-  feature_plots = FeaturePlot(integrated_cancer_cell_stage, 
-                              features = signature_list_names,
-                              ncol = 4
-                              ,min.cutoff = -0.5
-                              ,max.cutoff = 0.5
-                              ,combine = F
-  )
-  feature_plots = lapply(feature_plots, function(x){
-    return(x + scale_colour_gradient2(
-      high = "gold"
-      ,low = "blue"
-      ,mid = "grey"
-      ,limits = c(-0.5, 0.5)))
-  })
-  all_plots = append(all_plots, feature_plots)
-}
 
-
-png("split_by_metastasis.png",width = 45, height = 8, units = "in", res = 400)
-ggarrange(
-  plotlist = all_plots
-  ,ncol = 11
-  ,nrow = 2
-)
-dev.off()
 
 png("test.png",width = 16, height = 20, units = "in", res = 400)
 FeaturePlot(integrated_cancer_cell, 
