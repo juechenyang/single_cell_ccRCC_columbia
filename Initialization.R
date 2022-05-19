@@ -133,3 +133,10 @@ HLA = c("HLA-F","HLA-G","HLA-A","HLA-E","HLA-C","HLA-B","HLA-DRA","HLA-DRB5",
 
 CoQ10 = c("DHODH","ETFA","ETFB", "SQOR", "PRODH", "CHDH", "SARDH")
 
+Iodothyronine_deiodinases_1_3 = c("DIO1","DIO2","DIO3")
+Glutathione_peroxidases = c("GPX1","GPX2","GPX3","GPX4","GPX6")
+Selenoproteins = c("C11orf31","EPT1","SelK","SelM","SEPN1","SelO",
+                   "SEPP1","MSRB1","SelS","SelT","SelV","SEPW1","Sel15",
+                   "TrxR1","TrxR2","TrxR3")
+Selenophosphate_synthetase_2 = c("SEPHS2","SPS2")
+

@@ -4,21 +4,28 @@ integrated_cancer_cell = readRDS("integrated_cancer_cells.rds")
 DefaultAssay(integrated_cancer_cell) = "RNA"
 integrated_cancer_cell = NormalizeData(integrated_cancer_cell)
 #add metastatic status for each cell
-integrated_cancer_cell$metastatic_status = 
-  ifelse(integrated_cancer_cell$patient=="Patient5", "Metastatic", "Non_metastatic")
+integrated_cancer_cell$stage = 
+  ifelse(integrated_cancer_cell$patient=="Patient5", "Metastatic", integrated_cancer_cell$stage)
 
 #add module score to selected signature
-signature_list = list("MT" = MT
-                      ,"Complex_I"=Complex_I
+signature_list = list(
+                      "Complex_I"=Complex_I
                       ,"Complex_II"=Complex_II
                       ,"Complex_III"=Complex_III
                       ,"Complex_IV"=Complex_IV
+                      ,"MT" = MT
                       ,"TCA"=TCA
                       ,"glycolysis"=glycolysis
                       ,"HIF_1A" = HIF1A
                       ,"HLA"=HLA
                       ,"MRP_positive"=MRP_positive
 )
+
+# signature_list = list("Iodothyronine_deiodinases_1_3"=Iodothyronine_deiodinases_1_3,
+#                       "Glutathione_peroxidases"=Glutathione_peroxidases,
+#                       "Selenoproteins"=Selenoproteins,
+#                       "Selenophosphate_synthetase_2"=Selenophosphate_synthetase_2
+# )
 signature_list_names = names(signature_list)
 integrated_cancer_cell = AddModuleScore(integrated_cancer_cell, 
                                         features = signature_list, 
@@ -32,43 +39,78 @@ remove_column_index = match(paste0(signature_list_names, 1:length(signature_list
 integrated_cancer_cell@meta.data = 
 integrated_cancer_cell@meta.data[,-remove_column_index]
 
-#draw feature plots without scaling for all module signature
-feature_plots = FeaturePlot(integrated_cancer_cell, 
-                            features = signature_list_names
-#                            ,ncol = 4
-#                            ,min.cutoff = -0.5
-#                            ,max.cutoff = 0.5
-                            ,combine = F
-)
-feature_plots = lapply(feature_plots, function(x){
-  return(x + scale_colour_gradient2(
-    high = "gold"
-    ,low = "blue"
-    ,mid = "grey"
-#   ,limits = c(-0.5, 0.5)
-   ))
-})
+#define group
+integrated_cancer_cell@meta.data[,paste0(signature_list_names, "_group")] = 
+  lapply(integrated_cancer_cell@meta.data[,signature_list_names], FUN = function(vx){
+    vx = sapply(vx, FUN = function(x){
+      if(x < -0.25){
+        return("<-0.25")
+      }else if(x >= -0.25 & x < -0.1){
+        return("-0.25 to -0.1")
+      }else if(x >= -0.1 & x < 0.1){
+        return("-0.1 to 0.1")
+      }else if(x >= 0.1 & x < 0.25){
+        return("0.1 to 0.25")
+      }else{
+        return(">=0.25")
+      }
+    })
+  })
 
-png("test.png",width = 16, height = 12, units = "in", res = 400)
+#draw feature plots with scaling
+all_plots = list()
+for(x in c("pT1b","pT3a","Metastatic")){
+  integrated_cancer_cell_stage = subset(integrated_cancer_cell, subset = stage == x)
+  target_res = 0.2
+  target_res_para = paste0("integrated_snn_res.", target_res)
+  all_types = unique(integrated_cancer_cell_stage[[target_res_para]])[[target_res_para]]
+  all_types = sort(all_types)
+  all_colors = colorRampPalette(palette_color)(length(all_types))
+  names(all_colors) = all_types
+  cluster_maps = DimPlot(integrated_cancer_cell_stage, reduction = "umap",
+                         group.by = "integrated_snn_res.0.2")+
+    scale_color_manual(
+      breaks = all_types, 
+      values=all_colors[all_types])+ggtitle(x)
+  all_plots = append(all_plots, list(cluster_maps))
+  
+  all_types = unique(integrated_cancer_cell_stage@meta.data[,paste0(signature_list_names[1], "_group")])
+  all_types = sort(all_types)
+  all_colors = c("grey", "cyan", "blue", "gold", "gold3")
+  names(all_colors) = all_types
+  
+  feature_group_plots = lapply(signature_list_names, FUN = function(signature){
+    p = DimPlot(integrated_cancer_cell_stage, reduction = "umap",
+            group.by = paste0(signature, "_group"))+
+      scale_color_manual(
+        breaks = all_types, 
+        values=all_colors[all_types])
+    return(p)
+  })
+  
+  all_plots = append(all_plots, feature_group_plots)
+}
+
+png("feature_group_map_by_stage.png",width = 65, height = 20, units = "in", res = 400)
 ggarrange(
-  plotlist = feature_plots
-  ,ncol = 4
+  plotlist = all_plots
+  ,ncol = 11
   ,nrow = 3
 )
 dev.off()
 
-integrated_cancer_cell@meta.data[,paste0(signature_list_names, "_group")] = 
-lapply(integrated_cancer_cell@meta.data[,signature_list_names], FUN = function(vx){
-  vx = sapply(vx, FUN = function(x){
-    if(x < -0.25){
-      return("lower than -0.25")
-    }else if(x > 0.25){
-      return("higher than 0.25")
-    }else{
-      return("between -0.25 and 0.25")
-    }
-  })
-})
+png("human_selenoproteins_split_by_stage.png",width = 20, height = 8, units = "in", res = 400)
+ggarrange(
+  plotlist = all_plots
+  ,ncol = 5
+  ,nrow = 2
+)
+dev.off()
+
+
+
+
+
   
 
 ###########################################################################
