@@ -140,3 +140,8 @@ Selenoproteins = c("C11orf31","EPT1","SelK","SelM","SEPN1","SelO",
                    "TrxR1","TrxR2","TrxR3")
 Selenophosphate_synthetase_2 = c("SEPHS2","SPS2")
 
+NRF2 = c("GCLC", "GCLM", "GSR", "GPX1", "GPX2", "TXNRD1", "TXN", "PRDX1", "PRDX6",
+         "SOD1", "SOD2", "SOD3", "CAT", "GSTA1", "GSTA2", "GSTA3", "GSTA4",
+         "GSTM1", "GSTM2", "GSTM3", "GSTM4", "GSTM5", "GSTM6", "MGST2", "MGST3",
+         "UGT1A6", "UGT2B1", "UGT2B5", "NQO1", "AKR1A1", "AKR1B8")
+
