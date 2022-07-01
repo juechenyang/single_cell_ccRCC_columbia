@@ -7,7 +7,7 @@ integrated_cancer_cells = NormalizeData(integrated_cancer_cells)
 integrated_cancer_cells$stage = 
   ifelse(integrated_cancer_cells$patient=="Patient5", "Metastatic", integrated_cancer_cells$stage)
 
-#add module score to selected signature
+#initialize signature list
 signature_list = list(
                       "Complex_I"=Complex_I
                       ,"Complex_II"=Complex_II
@@ -27,6 +27,8 @@ signature_list = list(
 #                       "Selenoproteins"=Selenoproteins,
 #                       "Selenophosphate_synthetase_2"=Selenophosphate_synthetase_2
 # )
+
+# add Seurat module score based on pre-defined signature list
 signature_list_names = names(signature_list)
 integrated_cancer_cells = AddModuleScore(integrated_cancer_cells, 
                                         features = signature_list, 
@@ -291,20 +293,6 @@ ggarrange(
 dev.off()
 
 
-# plts = FeaturePlot(integrated_cancer_cells,
-#                    features = paste0(signature_list_names, "_Normalize_Zscore"),
-#                    combine = F,
-#                    min.cutoff = -1,
-#                    max.cutoff = 1)
-# plts = lapply(plts, function(x){
-#   return(x + scale_colour_gradient2(
-#     high = "gold"
-#     ,low = "blue"
-#     ,mid = "grey"
-#     ,limits = c(-1, 1)))
-# })
-
-
 
   
 
@@ -336,131 +324,8 @@ dev.off()
 ######################################################################################################################################################
 
 
-
-#plot through split view
-all_plots = list()
-for(x in c("metastasis", "non-metastasis")){
-  integrated_cancer_cells_stage = subset(integrated_cancer_cells, subset = metastatic_status == x)
-  target_res = 0.2
-  target_res_para = paste0("integrated_snn_res.", target_res)
-  all_types = unique(integrated_cancer_cells_stage[[target_res_para]])[[target_res_para]]
-  all_types = sort(all_types)
-  all_colors = colorRampPalette(palette_color)(length(all_types))
-  names(all_colors) = all_types
-  cluster_maps = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
-                         group.by = "integrated_snn_res.0.2")+
-    scale_color_manual(
-      breaks = all_types, 
-      values=all_colors[all_types])+ggtitle(x)
-  all_plots = append(all_plots, list(cluster_maps))
-  
-  feature_plots = FeaturePlot(integrated_cancer_cells_stage, 
-                              features = signature_list_names,
-                              ncol = 4
-                              ,min.cutoff = -0.5
-                              ,max.cutoff = 0.5
-                              ,combine = F
-  )
-  feature_plots = lapply(feature_plots, function(x){
-    return(x + scale_colour_gradient2(
-      high = "gold"
-      ,low = "blue"
-      ,mid = "grey"
-      ,limits = c(-0.5, 0.5)))
-  })
-  all_plots = append(all_plots, feature_plots)
-}
-
-
-png("split_by_metastasis.png",width = 45, height = 8, units = "in", res = 400)
-ggarrange(
-  plotlist = all_plots
-  ,ncol = 11
-  ,nrow = 2
-)
-dev.off()
-
-#######################################################
-#Umaps
-#######################################################
-
-#subclustering_umap
-target_res = 0.2
-target_res_para = paste0("integrated_snn_res.", target_res)
-all_types = unique(integrated_cancer_cells[[target_res_para]])[[target_res_para]]
-all_types = sort(all_types)
-all_colors = colorRampPalette(palette_color)(length(all_types))
-names(all_colors) = all_types
-png("subclustering_umap.png",9,9, units = "in", res = 300)
-DimPlot(integrated_cancer_cells, reduction = "umap", 
-        group.by = "integrated_snn_res.0.2")+
-  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain clusters")
-dev.off()
-
-
-
-#subclustering_umap
-target_res = 0.2
-target_res_para = paste0("integrated_snn_res.", target_res)
-all_types = unique(integrated_cancer_cells[[target_res_para]])[[target_res_para]]
-all_types = sort(all_types)
-all_colors = colorRampPalette(palette_color)(length(all_types))
-names(all_colors) = all_types
-signature_list = list("MT" = MT
-                      ,"Complex_I"=Complex_I
-                      ,"Complex_II"=Complex_II
-                      ,"Complex_III"=Complex_III
-                      ,"Complex_IV"=Complex_IV
-                      ,"Complex_V"=Complex_V
-                      ,"TCA"=TCA
-                      ,"glycolysis"=glycolysis
-                      ,"glycolyticAndTCA"=glycolyticAndTCA
-                      ,"MAS"=MAS
-                      ,"HIF1A" = HIF1A
-                      ,"CU"=CU
-                      ,"EMT"=EMT
-                      ,"HIF1A_2A"=HIF1A_2A
-                      ,"HLA"=HLA
-                      ,"MRP"=MRP
-                      ,"MRP_positive"=MRP_positive
-                      ,"MRP_negative"=MRP_negative
-)
-signature_list_names = names(signature_list)
-integrated_cancer_cells = AddModuleScore(integrated_cancer_cells, 
-                                        features = signature_list, 
-                                        assay = "RNA", 
-                                        name = signature_list_names)
-integrated_cancer_cells@meta.data[,signature_list_names] = 
-  integrated_cancer_cells@meta.data[,paste0(signature_list_names, 1:length(signature_list_names))]
-
-p1 = DimPlot(integrated_cancer_cells, reduction = "umap", group.by = target_res_para)+
-  scale_color_manual(breaks = all_types, values=all_colors[all_types])+ggtitle("Louvain cluster")
-p2 = DimPlot(integrated_cancer_cells, reduction = "umap", group.by = "patient")
-p3 = FeaturePlot(integrated_cancer_cells, 
-                 features = signature_list_names, 
-                 ncol = 4
-                 ,min.cutoff = -0.5
-                 ,max.cutoff = 0.5
-                 ,combine = F
-)
-
-p3 = lapply(p3, function(x){
-  return(x + scale_colour_gradient2(
-                                    high = "gold"
-                                   ,low = "blue"
-                                   ,mid = "grey"
-                                   ,limits = c(-0.5, 0.5)))
-})
-p4 = DimPlot(integrated_cancer_cells, reduction = "umap", group.by = "stage")
-plot_List = append(list(p1,p2,p4), p3)
-png("module_score_extension_markers.png",25,10, units = "in", res = 400)
-ggarrange(
-  plotlist = plot_List
-  ,ncol = 7
-  ,nrow = 3
-)
-dev.off()
-
+raw_count_tag = "_RawCount"
+normalized_count_tag = "_NormalizedCount"
 
 #add raw count data for composite markers
 AddRawCount = function(object, gene_list){
@@ -478,7 +343,7 @@ AddRawCount = function(object, gene_list){
     selected_genes = selected_genes[is_in_mat]
     selected_mat = mat[selected_genes, ]
     composite_marker_exp = as.numeric(apply(selected_mat, MARGIN = 2, FUN = mean))
-    marker_tag = paste0(marker_tag,"_counts")
+    marker_tag = paste0(marker_tag,raw_count_tag)
     result_list[[marker_tag]] = composite_marker_exp
   }
   result_list = as.data.frame(result_list)
@@ -486,6 +351,276 @@ AddRawCount = function(object, gene_list){
   object[[colnames(x = result_list)]] <- result_list
   return(object)
 }
+
+#add normalize count to object
+AddNormalizeCount = function(object, gene_list){
+  mat = object[["RNA"]]@data
+  result_list = list()
+  for(x in 1:length(gene_list)){
+    selected_genes = gene_list[[x]]
+    marker_tag = names(gene_list[x])
+    is_in_mat = selected_genes %in% rownames(mat)
+    if(!all(is_in_mat)){
+      not_available_genes = selected_genes[!is_in_mat]
+      print(paste0(paste(not_available_genes, collapse = ","), 
+                   " is not available for analysis"))
+    }
+    selected_genes = selected_genes[is_in_mat]
+    selected_mat = mat[selected_genes, ]
+    composite_marker_exp = as.numeric(apply(selected_mat, MARGIN = 2, FUN = mean))
+    marker_tag = paste0(marker_tag,normalized_count_tag)
+    result_list[[marker_tag]] = composite_marker_exp
+  }
+  result_list = as.data.frame(result_list)
+  rownames(result_list) = colnames(x=object)
+  object[[colnames(x = result_list)]] <- result_list
+  return(object)
+}
+
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+integrated_cancer_cells = AddRawCount(integrated_cancer_cells, signature_list)
+
+
+hist_plts = lapply(signature_list_names, FUN = function(sig){
+  p = ggplot(integrated_cancer_cells@meta.data, aes_string(x=paste0(sig, raw_count_tag)))+
+    geom_histogram(color="black", fill="lightblue")+
+    ggtitle(sig)
+  return(p)
+})
+
+png("raw_count_hist.png",width = 18, height = 12, units = "in", res = 300)
+ggarrange(
+  plotlist = hist_plts,
+  ncol = 4,
+  nrow = 3
+)
+dev.off()
+
+#define group
+integrated_cancer_cells@meta.data[,paste0(signature_list_names, raw_count_tag, "_group")] = 
+  lapply(integrated_cancer_cells@meta.data[,paste0(signature_list_names, raw_count_tag)], FUN = function(vx){
+    vx = sapply(vx, FUN = function(x){
+      if(x < 2.5){
+        return("<2.5")
+      }else if(x >= 2.5 & x < 5){
+        return("2.5 to 5")
+      }else if(x >= 5 & x < 7.5){
+        return("5 to 7.5")
+      }else if(x >= 7.5 & x < 10){
+        return("7.5 to 10")
+      }else{
+        return(">=10")
+      }
+    })
+  })
+
+#draw feature plots with scaling
+louvain_plots = list()
+feature_plots = list()
+group_order <- c(">=10", "7.5 to 10", "5 to 7.5", "2.5 to 5", "<2.5")
+for(x in c("pT1b","pT3a","Metastatic")){
+  integrated_cancer_cells_stage = subset(integrated_cancer_cells, subset = stage == x)
+  
+  target_res = 0.2
+  target_res_para = paste0("integrated_snn_res.", target_res)
+  all_types = unique(integrated_cancer_cells_stage[[target_res_para]])[[target_res_para]]
+  all_types = sort(all_types)
+  all_colors = colorRampPalette(palette_color)(length(all_types))
+  names(all_colors) = all_types
+  cluster_maps = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
+                         group.by = "integrated_snn_res.0.2")+
+    scale_color_manual(
+      breaks = all_types, 
+      values=all_colors[all_types])+ggtitle(x)+
+    theme(plot.title = element_text(size=32))
+  louvain_plots = append(louvain_plots, list(cluster_maps))
+  
+  all_types = group_order
+  all_types = sort(all_types)
+  all_colors = c("blue", "gold", "grey", "gold3", "cyan")
+  names(all_colors) = all_types
+  
+  #sort legend
+  all_types_factor = factor(all_types, levels = group_order)
+  all_types = as.character(sort(all_types_factor))
+  all_colors = all_colors[all_types]
+  
+  
+  feature_group_plots = lapply(signature_list_names, FUN = function(signature){
+    plot_title = signature
+    if(x!="pT1b"){
+      plot_title = ""
+    }
+    
+    integrated_cancer_cells_stage_signature = subset(integrated_cancer_cells, subset = stage == x)
+    p = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
+                group.by = paste0(signature, raw_count_tag, "_group"))+
+      scale_color_manual(
+        breaks = all_types, 
+        values=all_colors[all_types])+
+      theme(plot.title = element_text(size=32),legend.text=element_text(size=30))+
+      guides(colour = guide_legend(override.aes = list(size=12)))+
+      ggtitle(plot_title)
+    return(p)
+  })
+  
+  feature_plots = append(feature_plots, feature_group_plots)
+}
+
+louvain_plots_rev = lapply(louvain_plots, FUN = function(x){
+  x = x + guides(colour = guide_legend(override.aes = list(size=12)))+
+    theme(plot.title = element_text(size=32),legend.text=element_text(size=30))
+  return(x)
+})
+
+png("raw_count_score_by_stage.png",width = 70, height = 20, units = "in", res = 300)
+ggarrange(
+  ggarrange(plotlist=louvain_plots_rev, nrow = 3, common.legend = T, legend = "left"),
+  ggarrange(plotlist=feature_plots, nrow = 3, ncol = 11, common.legend = T, legend = "right")
+  ,ncol = 2
+  ,widths = c(1.2, 11)
+)
+dev.off()
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+integrated_cancer_cells = AddNormalizeCount(integrated_cancer_cells, signature_list)
+
+
+hist_plts = lapply(signature_list_names, FUN = function(sig){
+  p = ggplot(integrated_cancer_cells@meta.data, aes_string(x=paste0(sig, normalized_count_tag)))+
+    geom_histogram(color="black", fill="lightblue")+
+    ggtitle(sig)
+  return(p)
+})
+
+png("normalized_count_hist.png",width = 18, height = 12, units = "in", res = 300)
+ggarrange(
+  plotlist = hist_plts,
+  ncol = 4,
+  nrow = 3
+)
+dev.off()
+
+#define group
+integrated_cancer_cells@meta.data[,paste0(signature_list_names, normalized_count_tag, "_group")] = 
+  lapply(integrated_cancer_cells@meta.data[,paste0(signature_list_names, normalized_count_tag)], FUN = function(vx){
+    vx = sapply(vx, FUN = function(x){
+      if(x < 0.25){
+        return("<0.25")
+      }else if(x >= 0.25 & x < 0.5){
+        return("0.25 to 0.5")
+      }else if(x >= 0.5 & x < 0.75){
+        return("0.5 to 0.75")
+      }else if(x >= 0.75 & x < 1){
+        return("0.75 to 1")
+      }else{
+        return(">=1")
+      }
+    })
+  })
+
+#draw feature plots with scaling
+louvain_plots = list()
+feature_plots = list()
+group_order <- c(">=1", "0.75 to 1", "0.5 to 0.75", "0.25 to 0.5", "<0.25")
+for(x in c("pT1b","pT3a","Metastatic")){
+  integrated_cancer_cells_stage = subset(integrated_cancer_cells, subset = stage == x)
+  
+  target_res = 0.2
+  target_res_para = paste0("integrated_snn_res.", target_res)
+  all_types = unique(integrated_cancer_cells_stage[[target_res_para]])[[target_res_para]]
+  all_types = sort(all_types)
+  all_colors = colorRampPalette(palette_color)(length(all_types))
+  names(all_colors) = all_types
+  cluster_maps = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
+                         group.by = "integrated_snn_res.0.2")+
+    scale_color_manual(
+      breaks = all_types, 
+      values=all_colors[all_types])+ggtitle(x)+
+    theme(plot.title = element_text(size=32))
+  louvain_plots = append(louvain_plots, list(cluster_maps))
+  
+  all_types = group_order
+  #all_types = sort(all_types)
+  all_colors = c("gold","gold3", "grey", "cyan", "blue")
+  names(all_colors) = all_types
+  
+  #sort legend
+  all_types_factor = factor(all_types, levels = group_order)
+  all_types = as.character(sort(all_types_factor))
+  all_colors = all_colors[all_types]
+  
+  
+  feature_group_plots = lapply(signature_list_names, FUN = function(signature){
+    plot_title = signature
+    if(x!="pT1b"){
+      plot_title = ""
+    }
+    
+    integrated_cancer_cells_stage_signature = subset(integrated_cancer_cells, subset = stage == x)
+    p = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
+                group.by = paste0(signature, normalized_count_tag, "_group"))+
+      scale_color_manual(
+        breaks = all_types, 
+        values=all_colors[all_types])+
+      theme(plot.title = element_text(size=32),legend.text=element_text(size=30))+
+      guides(colour = guide_legend(override.aes = list(size=12)))+
+      ggtitle(plot_title)
+    return(p)
+  })
+  
+  feature_plots = append(feature_plots, feature_group_plots)
+}
+
+louvain_plots_rev = lapply(louvain_plots, FUN = function(x){
+  x = x + guides(colour = guide_legend(override.aes = list(size=12)))+
+    theme(plot.title = element_text(size=32),legend.text=element_text(size=30))
+  return(x)
+})
+
+png("normalized_count_score_by_stage.png",width = 70, height = 20, units = "in", res = 300)
+ggarrange(
+  ggarrange(plotlist=louvain_plots_rev, nrow = 3, common.legend = T, legend = "left"),
+  ggarrange(plotlist=feature_plots, nrow = 3, ncol = 11, common.legend = T, legend = "right")
+  ,ncol = 2
+  ,widths = c(1.2, 11)
+)
+dev.off()
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+
+
+
 
 integrated_cancer_cells = AddRawCount(integrated_cancer_cells, signature_list)
 
@@ -520,30 +655,7 @@ ggarrange(
 dev.off()
 
 
-#add normalize count to object
-AddNormalizeCount = function(object, gene_list){
-  mat = object[["RNA"]]@data
-  result_list = list()
-  for(x in 1:length(gene_list)){
-    selected_genes = gene_list[[x]]
-    marker_tag = names(gene_list[x])
-    is_in_mat = selected_genes %in% rownames(mat)
-    if(!all(is_in_mat)){
-      not_available_genes = selected_genes[!is_in_mat]
-      print(paste0(paste(not_available_genes, collapse = ","), 
-                   " is not available for analysis"))
-    }
-    selected_genes = selected_genes[is_in_mat]
-    selected_mat = mat[selected_genes, ]
-    composite_marker_exp = as.numeric(apply(selected_mat, MARGIN = 2, FUN = mean))
-    marker_tag = paste0(marker_tag,"_normalize")
-    result_list[[marker_tag]] = composite_marker_exp
-  }
-  result_list = as.data.frame(result_list)
-  rownames(result_list) = colnames(x=object)
-  object[[colnames(x = result_list)]] <- result_list
-  return(object)
-}
+
 
 integrated_cancer_cells = AddNormalizeCount(integrated_cancer_cells, signature_list)
 
