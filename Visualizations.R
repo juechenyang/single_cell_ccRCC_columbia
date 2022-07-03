@@ -42,41 +42,47 @@ remove_column_index = match(paste0(signature_list_names, 1:length(signature_list
 integrated_cancer_cells@meta.data = 
 integrated_cancer_cells@meta.data[,-remove_column_index]
 
-#define group
-integrated_cancer_cells@meta.data[,paste0(signature_list_names, "_group")] = 
-  lapply(integrated_cancer_cells@meta.data[,signature_list_names], FUN = function(vx){
-    vx = sapply(vx, FUN = function(x){
-      if(x < -0.25){
-        return("<-0.25")
-      }else if(x >= -0.25 & x < -0.1){
-        return("-0.25 to -0.1")
-      }else if(x >= -0.1 & x < 0.1){
-        return("-0.1 to 0.1")
-      }else if(x >= 0.1 & x < 0.25){
-        return("0.1 to 0.25")
-      }else{
-        return(">=0.25")
-      }
-    })
+#define groups tag for different algs
+module_score_group_tag = "_ModuleScore_group"
+z_score_group_tag = "_ZScore_group"
+normalized_count_group_tag = "_NormalizedCount_group"
+raw_count_group_tag = "_RawCount_group"
+
+#create grouping variables for module scores of each pathway signature
+integrated_cancer_cells@meta.data[,paste0(signature_list_names, module_score_group_tag)] = 
+lapply(integrated_cancer_cells@meta.data[,signature_list_names], FUN = function(vx){
+  vx = sapply(vx, FUN = function(x){
+    if(x < -0.25){
+      return("<-0.25")
+    }else if(x >= -0.25 & x < -0.1){
+      return("-0.25 to -0.1")
+    }else if(x >= -0.1 & x < 0.1){
+      return("-0.1 to 0.1")
+    }else if(x >= 0.1 & x < 0.25){
+      return("0.1 to 0.25")
+    }else{
+      return(">=0.25")
+    }
   })
+})
 
 
 
 #draw feature plots with scaling
 louvain_plots = list()
 feature_plots = list()
+hist_plots = list()
 group_order <- c(">=0.25", "0.1 to 0.25", "-0.1 to 0.1", "-0.25 to -0.1", "<-0.25")
+target_res = 0.2
+target_res_para = paste0("integrated_snn_res.", target_res)
 for(x in c("pT1b","pT3a","Metastatic")){
   integrated_cancer_cells_stage = subset(integrated_cancer_cells, subset = stage == x)
-  
-  target_res = 0.2
-  target_res_para = paste0("integrated_snn_res.", target_res)
   all_types = unique(integrated_cancer_cells_stage[[target_res_para]])[[target_res_para]]
   all_types = sort(all_types)
   all_colors = colorRampPalette(palette_color)(length(all_types))
   names(all_colors) = all_types
   cluster_maps = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
-                         group.by = "integrated_snn_res.0.2")+
+                         group.by = target_res_para)+
     scale_color_manual(
       breaks = all_types, 
       values=all_colors[all_types])+ggtitle(x)+
@@ -84,7 +90,7 @@ for(x in c("pT1b","pT3a","Metastatic")){
     guides(colour = guide_legend(override.aes = list(size=12)))
   louvain_plots = append(louvain_plots, list(cluster_maps))
   
-  all_types = unique(integrated_cancer_cells_stage@meta.data[,paste0(signature_list_names[1], "_group")])
+  all_types = group_order
   all_types = sort(all_types)
   all_colors = c("grey", "cyan", "blue", "gold", "gold3")
   names(all_colors) = all_types
@@ -101,9 +107,9 @@ for(x in c("pT1b","pT3a","Metastatic")){
       plot_title = ""
     }
     
-    integrated_cancer_cells_stage_signature = subset(integrated_cancer_cells, subset = stage == x)
+   # integrated_cancer_cells_stage_signature = subset(integrated_cancer_cells, subset = stage == x)
     p = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
-            group.by = paste0(signature, "_group"))+
+            group.by = paste0(signature, module_score_group_tag))+
       scale_color_manual(
         breaks = all_types, 
         values=all_colors[all_types])+
@@ -114,27 +120,37 @@ for(x in c("pT1b","pT3a","Metastatic")){
   })
   
   feature_plots = append(feature_plots, feature_group_plots)
+  
+  #generate histogram for each pathway signature
+  # hist_plts = lapply(signature_list_names, FUN = function(sig){
+  #   p = ggplot(integrated_cancer_cells_stage@meta.data, aes_string(x=paste0(sig)))+
+  #     geom_histogram(color="black", fill="lightblue", bins = 80)+xlim(-2,5)+
+  #     ggtitle(sig)+
+  #     theme(plot.title = element_text(size=32), legend.text=element_text(size=30))
+  #   return(p)
+  # })
+  
+  #hist_plots = append(hist_plots, hist_plts)
 }
 
-louvain_plots_rev = lapply(louvain_plots, FUN = function(x){
-  x = x + guides(colour = guide_legend(override.aes = list(size=12)))+
-    theme(plot.title = element_text(size=32),legend.text=element_text(size=30))
-  return(x)
-})
+# png("module_score_hist_by_stage.png",width = 70, height = 20, units = "in", res = 300)
+# ggarrange(plotlist = hist_plots,ncol = 11, nrow = 3)
+# dev.off()
 
-setEPS()
-
-# naming the eps file
-postscript("module_score_u_map_by_stage.eps", height = 1080, width = 2160)
+# louvain_plots_rev = lapply(louvain_plots, FUN = function(x){
+#   x = x + guides(colour = guide_legend(override.aes = list(size=12)))+
+#     theme(plot.title = element_text(size=32),legend.text=element_text(size=30))
+#   return(x)
+# })
 
 # plotting the x and y position
 # vectors
-png("module_score_u_map_by_stage.png",width = 60, height = 20, units = "in", res = 300)
+png("module_score_u_map_by_stage.png",width = 70, height = 20, units = "in", res = 300)
 ggarrange(
-  ggarrange(plotlist=louvain_plots_rev, nrow = 3, common.legend = T, legend = "left"),
-  ggarrange(plotlist=feature_plots, nrow = 3, ncol = 10, common.legend = T, legend = "right")
+  ggarrange(plotlist=louvain_plots, nrow = 3, common.legend = T, legend = "left"),
+  ggarrange(plotlist=feature_plots, nrow = 3, ncol = 11, common.legend = T, legend = "right")
   ,ncol = 2
-  ,widths = c(1.2, 10)
+  ,widths = c(1.2, 11)
 )
 dev.off()
 
@@ -259,7 +275,7 @@ for(x in c("pT1b","pT3a","Metastatic")){
     return(p)
   })
   
-  feature_plots = append(feature_plots, feature_group_plots)p
+  feature_plots = append(feature_plots, feature_group_plots)
 }
 
 png("feature_zscore_group_map_by_stage.png",width = 70, height = 20, units = "in", res = 400)

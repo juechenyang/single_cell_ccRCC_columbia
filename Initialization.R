@@ -53,7 +53,7 @@ MRP_negative = c("MRPL12","MRPL14","MRPL15","MRPL17","MRPL18","MRPL23","MRPL24",
                  "MRPL36","MRPL38","MRPL40","MRPL47","MRPL53","MRPL55","MRPS6","MRPS11",
                  "MRPS15","MRPS16","MRPS25")
 MT = c("MT-CO1","MT-CO2","MT-CO3","MT-ATP6","MT-ATP8",
-       "MT-ND1","MT-ND3","MT-ND4","MT-ND4L")
+       "MT-ND1","MT-ND2", "MT-ND3","MT-ND4","MT-ND4L", "MT-ND5", "MT-ND6", "MT-CYB")
 new_signature = c("OSBPL6","NTM","RFTN1","MAPRE2","CXADR","DYSF","TGFA","EPHA6",
                   "GJB2","FBXL7","DTX4","UNC5B","PKP2","PRSS12","SLC16A2","EPHB1",
                   "MAN1A1","ADM","EDIL3","LGI2","DHRS3","PCDH7","PTPRU","CHSY3",

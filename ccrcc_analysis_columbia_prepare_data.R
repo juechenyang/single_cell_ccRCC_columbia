@@ -316,6 +316,30 @@ VlnPlot(pbmc.big, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol
 seurat_list_cd45pos=SplitObject(big_list[[1]],split.by="tissue")
 seurat_list_cd45neg=SplitObject(big_list[[2]],split.by="tissue")
 
+#Stage annotations
+#"pT3a"-- PatientA, Patient2, Patient3, Patient5(metastatic), Patient7
+#"pT1b"-- PatientB, PatientC, Patient1, Patient4, Patient6, Patient8
+
+#Grade annotations
+#"1"-- Patient3, Patient4, 
+#"2"-- PatientB, PatientC, Patient1, Patient2, Patient6, Patient8
+#"3"-- PatientA, Patient7
+#"4"-- Patient5
+#######
+
+# grade_anno = c("II", "II", "I", "I", "IV", "II", "III", "II", "III",
+#                "II", "II")
+# names(grade_anno) = c("Patient1", "Patient2", "Patient3", "Patient4", "Patient5",
+#                "Patient6", "Patient7", "Patient8", "PatientA", "PatientB",
+#                "PatientC")
+# stage_anno = c("pT1b","pT3a","pT3a","pT1b","pT3a","pT1b","pT3a","pT1b","pT3a","pT1b","pT1b")
+# names(stage_anno) = c("Patient1", "Patient2", "Patient3", "Patient4", "Patient5",
+#                       "Patient6", "Patient7", "Patient8", "PatientA", "PatientB",
+#                       "PatientC")
+# 
+# all_raw_data$grade = grade_anno[all_raw_data$patient]
+# all_raw_data$stage = stage_anno[all_raw_data$patient]
+
 # split seurat obj by patient and by tissue
 # seurat_list_cd45neg_split_by_tissue = list()
 # for(i in 1:length(seurat_list_cd45neg)){
