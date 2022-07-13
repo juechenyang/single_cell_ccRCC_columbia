@@ -26,9 +26,13 @@ signature_list = list(
                       ,"MRP_positive"=MRP_positive
                       ,"NRF2"=NRF2
 )
-
 # add Seurat module score based on pre-defined signature list
 signature_list_names = names(signature_list)
+#############################################################################################
+#############################################################################################
+#############################################################################################
+
+# Module score
 integrated_cancer_cells = AddModuleScore(integrated_cancer_cells, 
                                         features = signature_list, 
                                         assay = "RNA", 
@@ -62,7 +66,6 @@ lapply(integrated_cancer_cells@meta.data[,paste0(signature_list_names, module_sc
 #draw feature plots with scaling
 louvain_plots = list()
 feature_plots = list()
-hist_plots = list()
 group_order <- c(">=0.25", "0.1 to 0.25", "-0.1 to 0.1", "-0.25 to -0.1", "<-0.25")
 target_res = 0.2
 target_res_para = paste0("integrated_snn_res.", target_res)
@@ -77,8 +80,8 @@ for(x in c("pT1b","pT3a","Metastatic")){
     scale_color_manual(
       breaks = all_types, 
       values=all_colors[all_types])+ggtitle(x)+
-    theme(plot.title = element_text(size=32), legend.text=element_text(size=30))+
-    guides(colour = guide_legend(override.aes = list(size=12)))
+    theme(plot.title = element_text(size=15), legend.text=element_text(size=15))+
+    guides(colour = guide_legend(override.aes = list(size=6)))
   louvain_plots = append(louvain_plots, list(cluster_maps))
   
   all_types = group_order
@@ -102,28 +105,17 @@ for(x in c("pT1b","pT3a","Metastatic")){
       scale_color_manual(
         breaks = all_types, 
         values=all_colors[all_types])+
-      theme(plot.title = element_text(size=32), legend.text=element_text(size=30))+
+      theme(plot.title = element_text(size=15), legend.text=element_text(size=15))+
       ggtitle(plot_title)+
-      guides(colour = guide_legend(override.aes = list(size=12)))
+      guides(colour = guide_legend(override.aes = list(size=6)))
     return(p)
   })
   feature_plots = append(feature_plots, feature_group_plots)
   
-  # generate histogram for each pathway signature
-  # hist_plts = lapply(signature_list_names, FUN = function(sig){
-  #   p = ggplot(integrated_cancer_cells_stage@meta.data, aes_string(x=paste0(sig)))+
-  #     geom_histogram(color="black", fill="lightblue", bins = 80)+xlim(-2,5)+
-  #     ggtitle(sig)+
-  #     theme(plot.title = element_text(size=32), legend.text=element_text(size=30))
-  #   return(p)
-  # })
-  
-  #hist_plots = append(hist_plots, hist_plts)
-  
 }
 
 # plot out feature umap
-png("module_score_u_map_by_stage.png",width = 70, height = 20, units = "in", res = 300)
+png("module_score_u_map_by_stage.png",width = 100, height = 30, units = "cm", res = 300)
 ggarrange(
   ggarrange(plotlist=louvain_plots, nrow = 3, common.legend = T, legend = "left"),
   ggarrange(plotlist=feature_plots, nrow = 3, ncol = 11, common.legend = T, legend = "right")
@@ -131,10 +123,6 @@ ggarrange(
   ,widths = c(1.2, 11)
 )
 dev.off()
-
-# png("module_score_hist_by_stage.png",width = 70, height = 20, units = "in", res = 300)
-# ggarrange(plotlist = hist_plots,ncol = 11, nrow = 3)
-# dev.off()
 
 # plot out violin
 base = 5
@@ -153,7 +141,8 @@ all_vln_plots = lapply(signature_list_names, function(x){
     scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
     add_pvalue(p_table)+
     ylim(-1,base+2)+
-    theme(
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),
       axis.title.x = element_blank(),
       plot.title = element_text(color = "blue", size = 12, face = "bold", hjust = 0.5))+
     ylab(paste0(x, module_score_tag))+
@@ -626,8 +615,80 @@ dev.off()
 #########################################################################################################
 
 
+#####################################################################################################
+#pairwise-correlation plot
+#####################################################################################################
+
+Pairwise_Heatmap = function(exp_df){
+  col_fun = colorRampPalette(c("blue", 'white', 'red'))(20)
+  p.mat <- cor.mtest(exp_df)
+  cor_matrix = cor(exp_df, method="pearson")
+  
+  #draw the heatmap obj and return the real heatmap
+  heatmap_obj = corrplot(cor_matrix, p.mat = p.mat$p, col=col_fun, type="upper", insig = "blank", tl.cex=0.8,
+                         cl.cex = 1)
+  return(heatmap_obj)
+  
+  
+  #***********Used For Debug**************
+  # heatmap_plot = draw(heatmap_obj)
+  # return(invisible(NULL))
+  # heatmap_obj = corrplot::corrplot(matrix, p.mat = res1$p, col = col_fun,
+  # type="upper", pch.col = "white", insig = "label_sig",order="hclust", pch.cex=2, tl.pos="d",tl.srt=60)
+  
+}
+
+mat = integrated_cancer_cells[["RNA"]]@data
+plt_list = lapply(signature_list_names, FUN = function(x){
+  selected_genes = signature_list[[x]]
+  is_in_mat = selected_genes %in% rownames(mat)
+  if(!all(is_in_mat)){
+    not_available_genes = selected_genes[!is_in_mat]
+    print(paste0(paste(not_available_genes, collapse = ","), 
+                 " is not available for analysis"))
+  }
+  selected_genes = selected_genes[is_in_mat]
+  is_all_zero = sapply(selected_genes, FUN = function(x){
+    return(all(as.numeric(mat[x,])==0))
+  })
+  selected_genes = selected_genes[!is_all_zero]
+  selected_mat = mat[selected_genes, ]
+  selected_mat = data.frame(t(as.matrix(selected_mat)))
+  col_fun = colorRampPalette(c("blue", 'white', 'red'))(20)
+  p.mat <- cor_pmat(selected_mat, method="spearman")
+  cor_matrix = cor(selected_mat, method="spearman")
+  cor_matrix = data.frame(cor_matrix, 
+                          row.names = selected_genes, check.rows = F, 
+                          check.names = F)
+  names(cor_matrix) = selected_genes
+  return(ggcorrplot(cor_matrix, hc.order = TRUE, type = "upper",p.mat = p.mat))
+})
+
+plt_list_rev = lapply(plt_list, FUN = function(x){
+  x = x + theme(plot.margin = margin(t = 0,  # Top margin
+                                     r = 0,  # Right margin
+                                     b = 0,  # Bottom margin
+                                     l = 0))
+})
+
+png("pairwise_correlation.png", res = 300, units = "cm", height = 60, width = 100)
+ggarrange(plotlist = plt_list_rev, nrow = 2, ncol = 6)
+dev.off()
 
 
+
+
+
+
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
 #####################################################################################################
 #Heatmaps
 #####################################################################################################
