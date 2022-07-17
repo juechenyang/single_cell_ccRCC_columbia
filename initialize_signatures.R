@@ -38,6 +38,7 @@ Complex_I = c("NDUFA1","NDUFA10","NDUFA11","NDUFA12","NDUFA13","NDUFA2","NDUFA3"
               "NDUFS1","NDUFS2","NDUFS3","NDUFS4","NDUFS5","NDUFS6","NDUFS7",
               "NDUFS8","NDUFV1","NDUFV2","NDUFV3")
 Complex_II = c("SDHA","SDHB","SDHC","SDHD","SUCLA2","SUCLG1","SUCLG2")
+Complex_II = c("SDHA","SDHB","SDHC","SDHD")
 glycolyticAndTCA = c("ACO1","ACO2","ALDOA","ALDOB","ALDOC","BPGM","CS","CYB5R1",
                      "CYC1","DLAT","DLD","DLST","ECI1","ENO1","ENO2","ENO3","ETFB",
                      "FH","GAPDH","GCK","GOT1","GOT2","GPD1","GPD2","GPI","HK1",

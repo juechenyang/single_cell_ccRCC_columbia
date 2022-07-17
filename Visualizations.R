@@ -136,20 +136,19 @@ all_vln_plots = lapply(signature_list_names, function(x){
   reordered_stage = factor(integrated_cancer_cells$stage, levels = c("pT1b", "pT3a", "Metastatic"))
   score = integrated_cancer_cells@meta.data[,paste0(x, module_score_tag)] 
   ggplot(integrated_cancer_cells@meta.data, aes(x=reordered_stage, y=score))+
-    geom_violin(aes(fill=reordered_stage), draw_quantiles = 0.5)+
-    guides(fill=guide_legend(title="stage"))+
-    scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
-    add_pvalue(p_table)+
+    geom_violin(aes(fill=patient), draw_quantiles = 0.5)+
+    guides(fill=guide_legend(title="patient"))+
+    # scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
+    # add_pvalue(p_table)+
     ylim(-1,base+2)+
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          panel.background = element_blank(), axis.line = element_line(colour = "black"),
+    theme(
       axis.title.x = element_blank(),
       plot.title = element_text(color = "blue", size = 12, face = "bold", hjust = 0.5))+
     ylab(paste0(x, module_score_tag))+
     ggtitle(x)
 })
 
-png("module_score_vln_by_stage.png",width = 25, height = 12, units = "in", res = 300)
+png("module_score_vln_by_stage_and_patient.png",width = 25, height = 12, units = "in", res = 300)
 ggarrange(plotlist = all_vln_plots,ncol = 6, nrow = 2, common.legend = T, legend = "right")
 dev.off()
 
@@ -287,10 +286,10 @@ all_vln_plots = lapply(signature_list_names, function(x){
   reordered_stage = factor(integrated_cancer_cells$stage, levels = c("pT1b", "pT3a", "Metastatic"))
   score = integrated_cancer_cells@meta.data[,paste0(x, z_score_tag)] 
   ggplot(integrated_cancer_cells@meta.data, aes(x=reordered_stage, y=score))+
-    geom_violin(aes(fill=reordered_stage), draw_quantiles = 0.5)+
-    guides(fill=guide_legend(title="stage"))+
-    scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
-    add_pvalue(p_table)+
+    geom_violin(aes(fill=patient), draw_quantiles = 0.5)+
+    guides(fill=guide_legend(title="patient"))+
+    # scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
+    # add_pvalue(p_table)+
     ylim(-1,base+2)+
     theme(
       axis.title.x = element_blank(),
@@ -299,7 +298,7 @@ all_vln_plots = lapply(signature_list_names, function(x){
     ggtitle(x)
 })
 
-png("z_score_vln_by_stage.png",width = 25, height = 12, units = "in", res = 300)
+png("z_score_vln_by_stage_and_stage.png",width = 25, height = 12, units = "in", res = 300)
 ggarrange(plotlist = all_vln_plots,ncol = 6, nrow = 2, common.legend = T, legend = "right")
 dev.off()
 
@@ -450,10 +449,10 @@ all_vln_plots = lapply(signature_list_names, function(x){
   reordered_stage = factor(integrated_cancer_cells$stage, levels = c("pT1b", "pT3a", "Metastatic"))
   score = integrated_cancer_cells@meta.data[,paste0(x, normalized_count_tag)] 
   ggplot(integrated_cancer_cells@meta.data, aes(x=reordered_stage, y=score))+
-    geom_violin(aes(fill=reordered_stage), draw_quantiles = 0.5)+
-    guides(fill=guide_legend(title="stage"))+
-    scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
-    add_pvalue(p_table)+
+    geom_violin(aes(fill=patient), draw_quantiles = 0.5)+
+    guides(fill=guide_legend(title="patient"))+
+    #scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
+    #add_pvalue(p_table)+
     ylim(-1,base+2)+
     theme(
       axis.title.x = element_blank(),
@@ -462,7 +461,7 @@ all_vln_plots = lapply(signature_list_names, function(x){
     ggtitle(x)
 })
 
-png("normalized_count_vln_by_stage.png",width = 25, height = 12, units = "in", res = 300)
+png("normalized_count_vln_by_stage_and_patient.png",width = 25, height = 12, units = "in", res = 300)
 ggarrange(plotlist = all_vln_plots,ncol = 6, nrow = 2, common.legend = T, legend = "right")
 dev.off()
 
@@ -678,7 +677,11 @@ dev.off()
 
 
 
-
+#AUCell
+#######################################################################################
+cells_rankings <- AUCell_buildRankings(integrated_cancer_cells[["RNA"]]@counts, 
+                                       plotStats=FALSE)
+cells_AUC <- AUCell_calcAUC(signature_list, cells_rankings)
 
 
 #########################################################################################################
@@ -748,7 +751,7 @@ col_fun = colorRamp2(c(-0.5, 0, 0.5), c("blue", "black", "yellow"))
 
 ht = Heatmap(mat_new_order, top_annotation = top_anno, cluster_rows = F, cluster_columns = F,
              show_row_names = T, show_column_names = F, col = col_fun, name = "Expression"
-             , column_gap = unit(5, "mm")
+             , column_gap = unit(5, "mm"),
              #,column_order = rownames(order_df)
              , column_split = order_df[,1],
              row_names_gp = gpar(fontsize = 25, fontface = "bold"),
