@@ -1,8 +1,13 @@
 source("call_libraries.R")
-source("Initialization.R")
+source("initialize_signatures.R")
 integrated_cancer_cells = readRDS("integrated_cancer_cells.rds")
 DefaultAssay(integrated_cancer_cells) = "RNA"
 integrated_cancer_cells = NormalizeData(integrated_cancer_cells)
+include_patient6 = T
+if(!include_patient6){
+  #remove cells from patient 6
+  integrated_cancer_cells = subset(integrated_cancer_cells, subset = patient != "Patient6")
+}
 #add metastatic status for each cell
 integrated_cancer_cells$stage = 
   ifelse(integrated_cancer_cells$patient=="Patient5", "Metastatic", integrated_cancer_cells$stage)
@@ -136,10 +141,10 @@ all_vln_plots = lapply(signature_list_names, function(x){
   reordered_stage = factor(integrated_cancer_cells$stage, levels = c("pT1b", "pT3a", "Metastatic"))
   score = integrated_cancer_cells@meta.data[,paste0(x, module_score_tag)] 
   ggplot(integrated_cancer_cells@meta.data, aes(x=reordered_stage, y=score))+
-    geom_violin(aes(fill=patient), draw_quantiles = 0.5)+
+    geom_violin(aes(fill=stage), draw_quantiles = 0.5)+
     guides(fill=guide_legend(title="patient"))+
-    # scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
-    # add_pvalue(p_table)+
+    scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
+    add_pvalue(p_table)+
     ylim(-1,base+2)+
     theme(
       axis.title.x = element_blank(),
@@ -148,7 +153,7 @@ all_vln_plots = lapply(signature_list_names, function(x){
     ggtitle(x)
 })
 
-png("module_score_vln_by_stage_and_patient.png",width = 25, height = 12, units = "in", res = 300)
+png("module_score_vln_by_stage.png",width = 25, height = 12, units = "in", res = 300)
 ggarrange(plotlist = all_vln_plots,ncol = 6, nrow = 2, common.legend = T, legend = "right")
 dev.off()
 
@@ -682,6 +687,144 @@ dev.off()
 cells_rankings <- AUCell_buildRankings(integrated_cancer_cells[["RNA"]]@counts, 
                                        plotStats=FALSE)
 cells_AUC <- AUCell_calcAUC(signature_list, cells_rankings)
+mat = t(cells_AUC@assays@data$AUC)
+AUCell_score_tag = "_AUcell_score"
+integrated_cancer_cells@meta.data[,paste0(signature_list_names, AUCell_score_tag)] = mat
+
+split_plus_patient = T
+if(split_plus_patient){
+  #plot out violin
+  base = 1
+  interval = 0.5
+  all_vln_plots = lapply(signature_list_names, function(x){
+    p_table = compare_means(as.formula(paste0(paste0(x, AUCell_score_tag), "~", "stage")), 
+                            data = integrated_cancer_cells@meta.data, method = "t.test")
+    p_table = data.frame(p_table)[,c(2,3,5)]
+    p_table$y.position = seq(base,base+nrow(p_table)*interval,interval)[1:nrow(p_table)]
+    p_table = as_tibble(p_table)
+    reordered_stage = factor(integrated_cancer_cells$stage, levels = c("pT1b", "pT3a", "Metastatic"))
+    score = integrated_cancer_cells@meta.data[,paste0(x, AUCell_score_tag)] 
+    ggplot(integrated_cancer_cells@meta.data, aes(x=reordered_stage, y=score))+
+      geom_violin(aes(fill=patient), draw_quantiles = 0.5)+
+      guides(fill=guide_legend(title="stage"))+
+      #scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
+      #add_pvalue(p_table)+
+      ylim(-1,base)+
+      theme(
+        axis.title.x = element_blank(),
+        plot.title = element_text(color = "blue", size = 12, face = "bold", hjust = 0.5))+
+      ylab(paste0(x, AUCell_score_tag))+
+      ggtitle(x)
+  })
+}else{
+  #plot out violin
+  base = 1
+  interval = 0.5
+  all_vln_plots = lapply(signature_list_names, function(x){
+    p_table = compare_means(as.formula(paste0(paste0(x, AUCell_score_tag), "~", "stage")), 
+                            data = integrated_cancer_cells@meta.data, method = "t.test")
+    p_table = data.frame(p_table)[,c(2,3,5)]
+    p_table$y.position = seq(base,base+nrow(p_table)*interval,interval)[1:nrow(p_table)]
+    p_table = as_tibble(p_table)
+    reordered_stage = factor(integrated_cancer_cells$stage, levels = c("pT1b", "pT3a", "Metastatic"))
+    score = integrated_cancer_cells@meta.data[,paste0(x, AUCell_score_tag)] 
+    ggplot(integrated_cancer_cells@meta.data, aes(x=reordered_stage, y=score))+
+      geom_violin(aes(fill=reordered_stage), draw_quantiles = 0.5)+
+      guides(fill=guide_legend(title="stage"))+
+      scale_fill_manual(values = c("#00BE0E", "#489DFF", "#FF6C67"))+
+      add_pvalue(p_table)+
+      ylim(-1,base)+
+      theme(
+        axis.title.x = element_blank(),
+        plot.title = element_text(color = "blue", size = 12, face = "bold", hjust = 0.5))+
+      ylab(paste0(x, AUCell_score_tag))+
+      ggtitle(x)
+  })
+}
+
+
+png("AUCell_score_vln_by_stage.png",width = 48, height = 27, units = "cm", res = 300)
+ggarrange(plotlist = all_vln_plots,ncol = 6, nrow = 2, common.legend = T, legend = "right")
+dev.off()
+
+#define group
+integrated_cancer_cells@meta.data[,paste0(signature_list_names, AUCell_score_tag, "_group")] = 
+  lapply(integrated_cancer_cells@meta.data[,paste0(signature_list_names, AUCell_score_tag)], FUN = function(vx){
+    vx = sapply(vx, FUN = function(x){
+      if(x < 0.1){
+        return("<0.1")
+      }else if(x >= 0.1 & x < 0.25){
+        return("0.1 to 0.25")
+      }else if(x >= 0.25 & x < 0.4){
+        return("0.25 to 0.4")
+      }else if(x >= 0.4 & x < 0.55){
+        return("0.4 to 0.55")
+      }else{
+        return(">=0.55")
+      }
+    })
+  })
+
+#draw feature plots with scaling
+louvain_plots = list()
+feature_plots = list()
+group_order <- c(">=0.55", "0.4 to 0.55", "0.25 to 0.4", "0.1 to 0.25", "<0.1")
+for(x in c("pT1b","pT3a","Metastatic")){
+  integrated_cancer_cells_stage = subset(integrated_cancer_cells, subset = stage == x)
+  
+  target_res = 0.2
+  target_res_para = paste0("integrated_snn_res.", target_res)
+  all_types = unique(integrated_cancer_cells_stage[[target_res_para]])[[target_res_para]]
+  all_types = sort(all_types)
+  all_colors = colorRampPalette(palette_color)(length(all_types))
+  names(all_colors) = all_types
+  cluster_maps = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
+                         group.by = "integrated_snn_res.0.2")+
+    scale_color_manual(
+      breaks = all_types, 
+      values=all_colors[all_types])+ggtitle(x)+
+    theme(plot.title = element_text(size=20),legend.text=element_text(size=20))+
+    guides(colour = guide_legend(override.aes = list(size=8)))
+  louvain_plots = append(louvain_plots, list(cluster_maps))
+  
+  all_types = group_order
+  #all_types = sort(all_types)
+  all_colors = c("gold","gold3", "grey", "cyan", "blue")
+  names(all_colors) = all_types
+  
+  #sort legend
+  all_types_factor = factor(all_types, levels = group_order)
+  all_types = as.character(sort(all_types_factor))
+  all_colors = all_colors[all_types]
+  
+  
+  feature_group_plots = lapply(signature_list_names, FUN = function(signature){
+    plot_title = signature
+    if(x!="pT1b"){
+      plot_title = ""
+    }
+    p = DimPlot(integrated_cancer_cells_stage, reduction = "umap",
+                group.by = paste0(signature, AUCell_score_tag, "_group"))+
+      scale_color_manual(
+        breaks = all_types, 
+        values=all_colors[all_types])+
+      theme(plot.title = element_text(size=20),legend.text=element_text(size=20))+
+      guides(colour = guide_legend(override.aes = list(size=8)))+
+      ggtitle(plot_title)
+    return(p)
+  })
+  
+  feature_plots = append(feature_plots, feature_group_plots)
+}
+
+png("feature_AUCell_score_group_map_by_stage.png",width = 100, height = 30, units = "cm", res = 300)
+ggarrange(
+  ggarrange(plotlist=louvain_plots, nrow = 3, common.legend = T, legend = "left"),
+  ggarrange(plotlist=feature_plots, nrow = 3, ncol = 11, common.legend = T, legend = "right")
+  ,ncol = 2
+  ,widths = c(1.2, 11)
+)
+dev.off()
 
 
 #########################################################################################################
