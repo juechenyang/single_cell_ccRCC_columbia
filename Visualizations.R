@@ -3,7 +3,7 @@ source("initialize_signatures.R")
 integrated_cancer_cells = readRDS("integrated_cancer_cells.rds")
 DefaultAssay(integrated_cancer_cells) = "RNA"
 integrated_cancer_cells = NormalizeData(integrated_cancer_cells)
-include_patient6 = T
+include_patient6 = F
 if(!include_patient6){
   #remove cells from patient 6
   integrated_cancer_cells = subset(integrated_cancer_cells, subset = patient != "Patient6")
@@ -16,6 +16,11 @@ module_score_tag = "_ModuleScore"
 z_score_tag = "_ZScore"
 normalized_count_tag = "_NormalizedCount"
 raw_count_tag = "_RawCount"
+#define font size
+plot_title_size = 15
+legend_text_size = 15
+legend_shape_size = 10
+
 
 #initialize signature list
 signature_list = list(
@@ -85,8 +90,12 @@ for(x in c("pT1b","pT3a","Metastatic")){
     scale_color_manual(
       breaks = all_types, 
       values=all_colors[all_types])+ggtitle(x)+
-    theme(plot.title = element_text(size=15), legend.text=element_text(size=15))+
-    guides(colour = guide_legend(override.aes = list(size=6)))
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),
+          axis.title.x = element_blank(),axis.title.y = element_blank(),
+          plot.title = element_text(size=plot_title_size, face="bold"), 
+          legend.text=element_text(size=legend_text_size, face="bold"))+
+    guides(colour = guide_legend(override.aes = list(size=legend_shape_size)))
   louvain_plots = append(louvain_plots, list(cluster_maps))
   
   all_types = group_order
@@ -110,9 +119,13 @@ for(x in c("pT1b","pT3a","Metastatic")){
       scale_color_manual(
         breaks = all_types, 
         values=all_colors[all_types])+
-      theme(plot.title = element_text(size=15), legend.text=element_text(size=15))+
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+            panel.background = element_blank(), axis.line = element_line(colour = "black"),
+            axis.title.x = element_blank(),axis.title.y = element_blank(),
+            plot.title = element_text(size=plot_title_size, face="bold"), 
+            legend.text=element_text(size=legend_text_size, face="bold"))+
       ggtitle(plot_title)+
-      guides(colour = guide_legend(override.aes = list(size=6)))
+      guides(colour = guide_legend(override.aes = list(size=legend_shape_size)))
     return(p)
   })
   feature_plots = append(feature_plots, feature_group_plots)
@@ -153,7 +166,7 @@ all_vln_plots = lapply(signature_list_names, function(x){
     ggtitle(x)
 })
 
-png("module_score_vln_by_stage.png",width = 25, height = 12, units = "in", res = 300)
+png("module_score_vln_by_stage.png",width = 70, height = 40, units = "cm", res = 300)
 ggarrange(plotlist = all_vln_plots,ncol = 6, nrow = 2, common.legend = T, legend = "right")
 dev.off()
 
